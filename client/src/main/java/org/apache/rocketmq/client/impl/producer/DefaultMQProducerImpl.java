@@ -528,10 +528,6 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                     mq = mqSelected;
                     brokersSent[times] = mq.getBrokerName();
                     try {
-                        boolean flag = true;
-                        if (flag){
-                            throw new MQClientException("fasd", null);
-                        }
                         beginTimestampPrev = System.currentTimeMillis();
                         long costTime = beginTimestampPrev - beginTimestampFirst;
                         if (timeout < costTime) {
@@ -667,6 +663,20 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
     }
 
+    /**
+     *
+     * @param msg 待发送消息
+     * @param mq 消息将发送到该消息队列上
+     * @param communicationMode 消息发送模式：SYNC、ASYNC、ONEWAY
+     * @param sendCallback 异步消息回调函数
+     * @param topicPublishInfo 主题路由信息
+     * @param timeout 消息发送超时时间
+     * @return
+     * @throws MQClientException
+     * @throws RemotingException
+     * @throws MQBrokerException
+     * @throws InterruptedException
+     */
     private SendResult sendKernelImpl(final Message msg,
                                       final MessageQueue mq,
                                       final CommunicationMode communicationMode,
