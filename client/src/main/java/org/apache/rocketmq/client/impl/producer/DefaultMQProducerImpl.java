@@ -519,10 +519,10 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             int times = 0;
             String[] brokersSent = new String[timesTotal];
             for (; times < timesTotal; times++) {
-                /**
-                 * 获取上次选择的队列名称，用于下次选择队列时，去除无效队列
-                 */
+
+                //  获取上次选择的队列名称，用于下次选择队列时，去除无效队列
                 String lastBrokerName = null == mq ? null : mq.getBrokerName();
+                // 选择一个发送队列
                 MessageQueue mqSelected = this.selectOneMessageQueue(topicPublishInfo, lastBrokerName);
                 if (mqSelected != null) {
                     mq = mqSelected;
@@ -684,6 +684,11 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                                       final TopicPublishInfo topicPublishInfo,
                                       final long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
         long beginStartTime = System.currentTimeMillis();
+
+
+        /**
+         * 获取broker的网络地址，如果brokerAddr为空则从nameServer主动更新一下topic
+         */
         String brokerAddr = this.mQClientFactory.findBrokerAddressInPublish(mq.getBrokerName());
         if (null == brokerAddr) {
             tryToFindTopicPublishInfo(mq.getTopic());
@@ -697,10 +702,14 @@ public class DefaultMQProducerImpl implements MQProducerInner {
             byte[] prevBody = msg.getBody();
             try {
                 //for MessageBatch,ID has been set in the generating process
+                /**
+                 * 为消息分配全局唯一ID
+                 */
                 if (!(msg instanceof MessageBatch)) {
                     MessageClientIDSetter.setUniqID(msg);
                 }
 
+                // 如果消息体默认超过4K，则开启压缩
                 int sysFlag = 0;
                 boolean msgBodyCompressed = false;
                 if (this.tryToCompressMessage(msg)) {

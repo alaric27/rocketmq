@@ -42,28 +42,86 @@ import org.apache.rocketmq.store.util.LibC;
 import sun.nio.ch.DirectBuffer;
 
 public class MappedFile extends ReferenceResource {
-    public static final int OS_PAGE_SIZE = 1024 * 4;
     protected static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
+    /**
+     * 操作系统每页大小，默认4K
+     */
+    public static final int OS_PAGE_SIZE = 1024 * 4;
+
+    /**
+     * 当前JVM中，Mapped-File虚拟内存
+     */
     private static final AtomicLong TOTAL_MAPPED_VIRTUAL_MEMORY = new AtomicLong(0);
 
-    private static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
-    protected final AtomicInteger wrotePosition = new AtomicInteger(0);
-    //ADD BY ChenYang
-    protected final AtomicInteger committedPosition = new AtomicInteger(0);
-    private final AtomicInteger flushedPosition = new AtomicInteger(0);
-    protected int fileSize;
-    protected FileChannel fileChannel;
     /**
-     * Message will put to here first, and then reput to FileChannel if writeBuffer is not null.
+     * 当前JVM中 MappedFile对象个数
+     */
+    private static final AtomicInteger TOTAL_MAPPED_FILES = new AtomicInteger(0);
+
+    /**
+     * 当前该文件的写指针
+     */
+    protected final AtomicInteger wrotePosition = new AtomicInteger(0);
+
+    /**
+     * 当前文件的提交指针
+     */
+    protected final AtomicInteger committedPosition = new AtomicInteger(0);
+
+    /**
+     * 刷写到磁盘的指针
+     */
+    private final AtomicInteger flushedPosition = new AtomicInteger(0);
+
+    /**
+     * 文件大小
+     */
+    protected int fileSize;
+
+    /**
+     * 文件通道
+     */
+    protected FileChannel fileChannel;
+
+    /**
+     * 堆内存Buffer
      */
     protected ByteBuffer writeBuffer = null;
+
+    /**
+     * 堆内存池
+     */
     protected TransientStorePool transientStorePool = null;
+
+    /**
+     * 文件名称
+     */
     private String fileName;
+
+    /**
+     * 该文件的初始偏移量
+     */
     private long fileFromOffset;
+
+    /**
+     * 物理文件
+     */
     private File file;
+
+    /**
+     * 物理文件对应的内存映射Buffer
+     */
     private MappedByteBuffer mappedByteBuffer;
+
+    /**
+     * 文件最后一次写入时间
+     */
     private volatile long storeTimestamp = 0;
+
+    /**
+     * 是否是MappedFileQueue的第一个文件
+     */
     private boolean firstCreateInQueue = false;
 
     public MappedFile() {
@@ -352,15 +410,22 @@ public class MappedFile extends ReferenceResource {
         return write > flush;
     }
 
+    /**
+     * 判断是否执行提交操作
+     * @param commitLeastPages 本次最小提交的页数
+     * @return
+     */
     protected boolean isAbleToCommit(final int commitLeastPages) {
         int flush = this.committedPosition.get();
         int write = this.wrotePosition.get();
 
+        // 如果当前文件已满，则返回true
         if (this.isFull()) {
             return true;
         }
 
         if (commitLeastPages > 0) {
+            // 对比当前写的距离之前提交的是否大于最小提交页
             return ((write / OS_PAGE_SIZE) - (flush / OS_PAGE_SIZE)) >= commitLeastPages;
         }
 
@@ -375,6 +440,10 @@ public class MappedFile extends ReferenceResource {
         this.flushedPosition.set(pos);
     }
 
+    /**
+     * 判断当前文件是否已写满，判断依据为当前写指针是否等于文件大小
+     * @return
+     */
     public boolean isFull() {
         return this.fileSize == this.wrotePosition.get();
     }
