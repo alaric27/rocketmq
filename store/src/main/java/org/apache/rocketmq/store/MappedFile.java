@@ -325,8 +325,11 @@ public class MappedFile extends ReferenceResource {
         return false;
     }
 
+
     /**
-     * @return The current flushed position
+     * 把内存的数据刷入磁盘
+     * @param flushLeastPages
+     * @return
      */
     public int flush(final int flushLeastPages) {
         if (this.isAbleToFlush(flushLeastPages)) {
@@ -334,7 +337,7 @@ public class MappedFile extends ReferenceResource {
                 int value = getReadPosition();
 
                 try {
-                    //We only append data to fileChannel or mappedByteBuffer, never both.
+                    // We only append data to fileChannel or mappedByteBuffer, never both.
                     if (writeBuffer != null || this.fileChannel.position() != 0) {
                         this.fileChannel.force(false);
                     } else {
@@ -377,6 +380,10 @@ public class MappedFile extends ReferenceResource {
         return this.committedPosition.get();
     }
 
+    /**
+     * 提交
+     * @param commitLeastPages
+     */
     protected void commit0(final int commitLeastPages) {
         int writePos = this.wrotePosition.get();
         int lastCommittedPosition = this.committedPosition.get();
@@ -386,8 +393,11 @@ public class MappedFile extends ReferenceResource {
                 ByteBuffer byteBuffer = writeBuffer.slice();
                 byteBuffer.position(lastCommittedPosition);
                 byteBuffer.limit(writePos);
+
+                //写入FileChannel
                 this.fileChannel.position(lastCommittedPosition);
                 this.fileChannel.write(byteBuffer);
+                // 设置提交指针
                 this.committedPosition.set(writePos);
             } catch (Throwable e) {
                 log.error("Error occurred when commit data to FileChannel.", e);
@@ -395,6 +405,12 @@ public class MappedFile extends ReferenceResource {
         }
     }
 
+
+    /**
+     * 是否能够刷盘
+     * @param flushLeastPages 最小的刷盘页
+     * @return
+     */
     private boolean isAbleToFlush(final int flushLeastPages) {
         int flush = this.flushedPosition.get();
         int write = getReadPosition();
@@ -448,6 +464,12 @@ public class MappedFile extends ReferenceResource {
         return this.fileSize == this.wrotePosition.get();
     }
 
+    /**
+     * 根据 偏移位置和消息大小获取消息
+     * @param pos
+     * @param size
+     * @return
+     */
     public SelectMappedBufferResult selectMappedBuffer(int pos, int size) {
         int readPosition = getReadPosition();
         if ((pos + size) <= readPosition) {
@@ -486,6 +508,11 @@ public class MappedFile extends ReferenceResource {
         return null;
     }
 
+    /**
+     * 清理，维护TOTAL_MAPPED_VIRTUAL_MEMORY和TOTAL_MAPPED_FILES变量
+     * @param currentRef
+     * @return
+     */
     @Override
     public boolean cleanup(final long currentRef) {
         if (this.isAvailable()) {
@@ -543,6 +570,7 @@ public class MappedFile extends ReferenceResource {
     }
 
     /**
+     * 获取最大的读指针
      * @return The max position which have valid data
      */
     public int getReadPosition() {
