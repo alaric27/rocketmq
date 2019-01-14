@@ -57,12 +57,17 @@ public abstract class ReferenceResource {
         return this.available;
     }
 
+    /**
+     * 关闭
+     * @param intervalForcibly
+     */
     public void shutdown(final long intervalForcibly) {
         if (this.available) {
             this.available = false;
             this.firstShutdownTimestamp = System.currentTimeMillis();
             this.release();
         } else if (this.getRefCount() > 0) {
+            // 如果当前时间已经超出最大强制清除时间，这把refCount设置为负数并进行清理
             if ((System.currentTimeMillis() - this.firstShutdownTimestamp) >= intervalForcibly) {
                 this.refCount.set(-1000 - this.getRefCount());
                 this.release();
@@ -70,6 +75,9 @@ public abstract class ReferenceResource {
         }
     }
 
+    /**
+     * 释放 每次减一，如果value小于0则执行cleanup方法
+     */
     public void release() {
         long value = this.refCount.decrementAndGet();
         if (value > 0)

@@ -1395,7 +1395,9 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public void putMessagePositionInfo(DispatchRequest dispatchRequest) {
+        // 根据 主题和队列ID获取对应的ConsumeQueue 文件
         ConsumeQueue cq = this.findConsumeQueue(dispatchRequest.getTopic(), dispatchRequest.getQueueId());
+        //
         cq.putMessagePositionInfoWrapper(dispatchRequest);
     }
 
@@ -1841,6 +1843,7 @@ public class DefaultMessageStore implements MessageStore {
         public void run() {
             DefaultMessageStore.log.info(this.getServiceName() + " service started");
 
+            // ReputMessageService线程每隔1毫秒就推送消息到消息消费队列和索引文件
             while (!this.isStopped()) {
                 try {
                     Thread.sleep(1);
