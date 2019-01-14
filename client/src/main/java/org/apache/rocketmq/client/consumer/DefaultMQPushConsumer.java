@@ -62,15 +62,16 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     protected final transient DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
 
     /**
+     * 消费者组
      * Consumers of the same role is required to have exactly same subscriptions and consumerGroup to correctly achieve
      * load balance. It's required and needs to be globally unique.
-     * </p>
-     *
+     * </p> *
      * See <a href="http://rocketmq.apache.org/docs/core-concept/">here</a> for further discussion.
      */
     private String consumerGroup;
 
     /**
+     * 消息消费模式，分为：集群模式、广播模式，默认为集群模式
      * Message model defines the way how messages are delivered to each consumer clients.
      * </p>
      *
@@ -114,6 +115,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * messages born prior to {@link #consumeTimestamp} will be ignored
      * </li>
      * </ul>
+     *
      */
     private ConsumeFromWhere consumeFromWhere = ConsumeFromWhere.CONSUME_FROM_LAST_OFFSET;
 

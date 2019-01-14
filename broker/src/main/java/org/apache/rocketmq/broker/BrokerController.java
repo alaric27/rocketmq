@@ -104,11 +104,31 @@ public class BrokerController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final InternalLogger LOG_PROTECTION = InternalLoggerFactory.getLogger(LoggerName.PROTECTION_LOGGER_NAME);
     private static final InternalLogger LOG_WATER_MARK = InternalLoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
+    /**
+     * Broker 的配置类
+     */
     private final BrokerConfig brokerConfig;
+
+    /**
+     * Netty Server启动配置类
+     */
     private final NettyServerConfig nettyServerConfig;
+
+    /**
+     * Netty Client 启动配置类
+     */
     private final NettyClientConfig nettyClientConfig;
+
+    /**
+     * 消息存储配置
+     */
     private final MessageStoreConfig messageStoreConfig;
+
+    /**
+     * consumerOffset.json 配置文件对应的管理器
+     */
     private final ConsumerOffsetManager consumerOffsetManager;
+
     private final ConsumerManager consumerManager;
     private final ConsumerFilterManager consumerFilterManager;
     private final ProducerManager producerManager;
@@ -219,6 +239,12 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+
+    /**
+     * 初始化
+     * @return
+     * @throws CloneNotSupportedException
+     */
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 

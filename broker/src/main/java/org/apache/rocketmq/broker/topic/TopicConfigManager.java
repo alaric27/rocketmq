@@ -40,20 +40,42 @@ import org.apache.rocketmq.common.protocol.body.KVTable;
 import org.apache.rocketmq.common.protocol.body.TopicConfigSerializeWrapper;
 import org.apache.rocketmq.common.sysflag.TopicSysFlag;
 
+/**
+ * 用于管理Topic的配置
+ */
 public class TopicConfigManager extends ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final long LOCK_TIMEOUT_MILLIS = 3000;
+
     private transient final Lock lockTopicConfigTable = new ReentrantLock();
 
+    /**
+     * topic名称对应的topic配置
+     */
     private final ConcurrentMap<String, TopicConfig> topicConfigTable =
         new ConcurrentHashMap<String, TopicConfig>(1024);
+    /**
+     * 配置的版本
+     */
     private final DataVersion dataVersion = new DataVersion();
+
+    /**
+     * 系统的topic
+     */
     private final Set<String> systemTopicList = new HashSet<String>();
+
+    /**
+     * 对应的BrokerController
+     */
     private transient BrokerController brokerController;
 
     public TopicConfigManager() {
     }
 
+    /**
+     * 构造函数，系统topic配置的初始化工作
+     * @param brokerController
+     */
     public TopicConfigManager(BrokerController brokerController) {
         this.brokerController = brokerController;
         {
@@ -134,6 +156,11 @@ public class TopicConfigManager extends ConfigManager {
         return this.systemTopicList;
     }
 
+    /**
+     * 默认TBW102 不能发送消息，其他的都可以
+     * @param topic
+     * @return
+     */
     public boolean isTopicCanSendMessage(final String topic) {
         return !topic.equals(MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC);
     }
@@ -142,6 +169,15 @@ public class TopicConfigManager extends ConfigManager {
         return this.topicConfigTable.get(topic);
     }
 
+    /**
+     * 在发送消息的方法中，创建topic,返回对应的TopicConfig
+     * @param topic
+     * @param defaultTopic
+     * @param remoteAddress
+     * @param clientDefaultTopicQueueNums
+     * @param topicSysFlag
+     * @return
+     */
     public TopicConfig createTopicInSendMessageMethod(final String topic, final String defaultTopic,
         final String remoteAddress, final int clientDefaultTopicQueueNums, final int topicSysFlag) {
         TopicConfig topicConfig = null;
@@ -157,6 +193,7 @@ public class TopicConfigManager extends ConfigManager {
                     TopicConfig defaultTopicConfig = this.topicConfigTable.get(defaultTopic);
                     if (defaultTopicConfig != null) {
                         if (defaultTopic.equals(MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC)) {
+                            // 如果不能自动创建topic,设置权限
                             if (!this.brokerController.getBrokerConfig().isAutoCreateTopicEnable()) {
                                 defaultTopicConfig.setPerm(PermName.PERM_READ | PermName.PERM_WRITE);
                             }
@@ -189,16 +226,20 @@ public class TopicConfigManager extends ConfigManager {
                             defaultTopic, remoteAddress);
                     }
 
+                    // 如果新建了主题
                     if (topicConfig != null) {
                         log.info("Create new topic by default topic:[{}] config:[{}] producer:[{}]",
                             defaultTopic, topicConfig, remoteAddress);
 
+                        // 把新建的Topic新加到topicConfigTable
                         this.topicConfigTable.put(topic, topicConfig);
 
+                        // 版本更新
                         this.dataVersion.nextVersion();
 
                         createNew = true;
 
+                        // 持久化
                         this.persist();
                     }
                 } finally {
@@ -209,6 +250,7 @@ public class TopicConfigManager extends ConfigManager {
             log.error("createTopicInSendMessageMethod exception", e);
         }
 
+        // 如果新创建了主题就去注册Broker
         if (createNew) {
             this.brokerController.registerBrokerAll(false, true,true);
         }
@@ -216,6 +258,16 @@ public class TopicConfigManager extends ConfigManager {
         return topicConfig;
     }
 
+    /**
+     *  当消息消费失败时候的 retry topic，
+     *  当消息发送失败的时候发送到topic,为%RETRY%groupname 的队列中,
+     *  此时不管是否设置可以自动创建主题，都会创建主题
+     * @param topic
+     * @param clientDefaultTopicQueueNums
+     * @param perm
+     * @param topicSysFlag
+     * @return
+     */
     public TopicConfig createTopicInSendMessageBackMethod(
         final String topic,
         final int clientDefaultTopicQueueNums,
@@ -303,6 +355,10 @@ public class TopicConfigManager extends ConfigManager {
         }
     }
 
+    /**
+     * 更新topic配置
+     * @param topicConfig
+     */
     public void updateTopicConfig(final TopicConfig topicConfig) {
         TopicConfig old = this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         if (old != null) {
@@ -316,6 +372,10 @@ public class TopicConfigManager extends ConfigManager {
         this.persist();
     }
 
+    /**
+     * 更新 topicConfigTable，以orderKVTableFromNs为准
+     * @param orderKVTableFromNs
+     */
     public void updateOrderTopicConfig(final KVTable orderKVTableFromNs) {
 
         if (orderKVTableFromNs != null && orderKVTableFromNs.getTable() != null) {
@@ -358,6 +418,10 @@ public class TopicConfigManager extends ConfigManager {
         }
     }
 
+    /**
+     * 删除主题
+     * @param topic
+     */
     public void deleteTopicConfig(final String topic) {
         TopicConfig old = this.topicConfigTable.remove(topic);
         if (old != null) {

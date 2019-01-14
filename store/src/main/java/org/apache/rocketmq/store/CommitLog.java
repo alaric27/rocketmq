@@ -1358,6 +1358,15 @@ public class CommitLog {
             return result;
         }
 
+
+        /**
+         * 追加消息到byteBuffer
+         * @param fileFromOffset
+         * @param byteBuffer
+         * @param maxBlank
+         * @param messageExtBatch, backed up by a byte array
+         * @return
+         */
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBatch messageExtBatch) {
             byteBuffer.mark();
