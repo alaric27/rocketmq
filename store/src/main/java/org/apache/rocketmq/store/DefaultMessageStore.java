@@ -458,6 +458,18 @@ public class DefaultMessageStore implements MessageStore {
         return commitLog;
     }
 
+
+    /**
+     *
+     * 获取消息
+     * @param group 消费组名
+     * @param topic 主题
+     * @param queueId 队列
+     * @param offset 偏移量
+     * @param maxMsgNums 最大拉取消息条数
+     * @param messageFilter 消息过滤器
+     * @return
+     */
     public GetMessageResult getMessage(final String group, final String topic, final int queueId, final long offset,
         final int maxMsgNums,
         final MessageFilter messageFilter) {
@@ -482,11 +494,15 @@ public class DefaultMessageStore implements MessageStore {
 
         final long maxOffsetPy = this.commitLog.getMaxOffset();
 
+        // 根据主题和队列编号获取消费队列
         ConsumeQueue consumeQueue = findConsumeQueue(topic, queueId);
         if (consumeQueue != null) {
+            // 获取队列中最小的偏移量
             minOffset = consumeQueue.getMinOffsetInQueue();
+            // 获取队列中最大的偏移量
             maxOffset = consumeQueue.getMaxOffsetInQueue();
 
+            // 消息偏移量异常情况下，矫正偏移量
             if (maxOffset == 0) {
                 status = GetMessageStatus.NO_MESSAGE_IN_QUEUE;
                 nextBeginOffset = nextOffsetCorrection(offset, 0);
@@ -504,6 +520,8 @@ public class DefaultMessageStore implements MessageStore {
                     nextBeginOffset = nextOffsetCorrection(offset, maxOffset);
                 }
             } else {
+                // 如果偏移量没有异常，minOffset < offset < maxOffset
+                // 从当前偏移量开始拉取32条数据
                 SelectMappedBufferResult bufferConsumeQueue = consumeQueue.getIndexBuffer(offset);
                 if (bufferConsumeQueue != null) {
                     try {
@@ -618,6 +636,7 @@ public class DefaultMessageStore implements MessageStore {
         long eclipseTime = this.getSystemClock().now() - beginTime;
         this.storeStatsService.setGetMessageEntireTimeMax(eclipseTime);
 
+        // 填充返回结果
         getResult.setStatus(status);
         getResult.setNextBeginOffset(nextBeginOffset);
         getResult.setMaxOffset(maxOffset);

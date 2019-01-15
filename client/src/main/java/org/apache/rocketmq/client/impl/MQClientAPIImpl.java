@@ -582,6 +582,15 @@ public class MQClientAPIImpl {
         return null;
     }
 
+    /**
+     * 异步拉取消息
+     * @param addr
+     * @param request
+     * @param timeoutMillis
+     * @param pullCallback
+     * @throws RemotingException
+     * @throws InterruptedException
+     */
     private void pullMessageAsync(
         final String addr,
         final RemotingCommand request,
@@ -592,6 +601,7 @@ public class MQClientAPIImpl {
             @Override
             public void operationComplete(ResponseFuture responseFuture) {
                 RemotingCommand response = responseFuture.getResponseCommand();
+                // 异步处理
                 if (response != null) {
                     try {
                         PullResult pullResult = MQClientAPIImpl.this.processPullResponse(response);

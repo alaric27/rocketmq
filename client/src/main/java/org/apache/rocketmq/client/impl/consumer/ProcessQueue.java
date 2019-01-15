@@ -35,6 +35,7 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.body.ProcessQueueInfo;
 
 /**
+ * ProcessQueue 是MessageQueue在消费端的重现、快照
  * Queue consumption snapshot
  */
 public class ProcessQueue {
@@ -44,7 +45,13 @@ public class ProcessQueue {
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final InternalLogger log = ClientLogger.getLog();
     private final ReadWriteLock lockTreeMap = new ReentrantReadWriteLock();
+    /**
+     * 消息存储容器
+     */
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
+    /**
+     * ProcessQueue 中总消息数
+     */
     private final AtomicLong msgCount = new AtomicLong();
     private final AtomicLong msgSize = new AtomicLong();
     private final Lock lockConsume = new ReentrantLock();
@@ -62,15 +69,25 @@ public class ProcessQueue {
     private volatile boolean consuming = false;
     private volatile long msgAccCnt = 0;
 
+
+    /**
+     * 判读锁是否过期 默认30秒
+     * @return
+     */
     public boolean isLockExpired() {
         return (System.currentTimeMillis() - this.lastLockTimestamp) > REBALANCE_LOCK_MAX_LIVE_TIME;
     }
 
+    /**
+     * 判读是否空闲
+     * @return
+     */
     public boolean isPullExpired() {
         return (System.currentTimeMillis() - this.lastPullTimestamp) > PULL_MAX_IDLE_TIME;
     }
 
     /**
+     * 移除超时未消费的消息，如果超时未消费，默认延迟3个延迟级别
      * @param pushConsumer
      */
     public void cleanExpiredMsg(DefaultMQPushConsumer pushConsumer) {
@@ -123,6 +140,11 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 添加消息，PullMessageService拉取消息后，先调用该方法将消息添加到ProcessQueue
+     * @param msgs
+     * @return
+     */
     public boolean putMessage(final List<MessageExt> msgs) {
         boolean dispatchToConsume = false;
         try {
@@ -164,6 +186,10 @@ public class ProcessQueue {
         return dispatchToConsume;
     }
 
+    /**
+     * 获取当前消息的最大间隔
+     * @return
+     */
     public long getMaxSpan() {
         try {
             this.lockTreeMap.readLock().lockInterruptibly();
@@ -181,6 +207,11 @@ public class ProcessQueue {
         return 0;
     }
 
+    /**
+     * 移除消息
+     * @param msgs
+     * @return
+     */
     public long removeMessage(final List<MessageExt> msgs) {
         long result = -1;
         final long now = System.currentTimeMillis();
@@ -295,6 +326,11 @@ public class ProcessQueue {
         }
     }
 
+    /**
+     * 批量取出batchSize条数据
+     * @param batchSize
+     * @return
+     */
     public List<MessageExt> takeMessags(final int batchSize) {
         List<MessageExt> result = new ArrayList<MessageExt>(batchSize);
         final long now = System.currentTimeMillis();

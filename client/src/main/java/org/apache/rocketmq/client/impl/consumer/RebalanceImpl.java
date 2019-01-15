@@ -238,6 +238,12 @@ public abstract class RebalanceImpl {
         return subscriptionInner;
     }
 
+
+    /**
+     * 根据topic 进行负载
+     * @param topic
+     * @param isOrder
+     */
     private void rebalanceByTopic(final String topic, final boolean isOrder) {
         switch (messageModel) {
             case BROADCASTING: {
@@ -297,6 +303,7 @@ public abstract class RebalanceImpl {
                         allocateResultSet.addAll(allocateResult);
                     }
 
+                    // 更新processQueue
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, allocateResultSet, isOrder);
                     if (changed) {
                         log.info(
@@ -397,6 +404,7 @@ public abstract class RebalanceImpl {
             }
         }
 
+        // 分发 pullRequestList
         this.dispatchPullRequest(pullRequestList);
 
         return changed;
