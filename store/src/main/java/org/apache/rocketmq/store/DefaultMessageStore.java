@@ -238,6 +238,8 @@ public class DefaultMessageStore implements MessageStore {
             this.scheduleMessageService.start();
         }
 
+        // 如果允许消息重复，则设置偏移量为CommitLog的提交偏移量
+        // 如果不允许消息重复，则设置偏移量为CommitLog的最大偏移量
         if (this.getMessageStoreConfig().isDuplicationEnable()) {
             this.reputMessageService.setReputFromOffset(this.commitLog.getConfirmOffset());
         } else {
@@ -1790,6 +1792,9 @@ public class DefaultMessageStore implements MessageStore {
             return this.reputFromOffset < DefaultMessageStore.this.commitLog.getMaxOffset();
         }
 
+        /**
+         * 把Commmitlog文件的中的消息转发到ConsumeQueue、Index等文件
+         */
         private void doReput() {
             for (boolean doNext = true; this.isCommitLogAvailable() && doNext; ) {
 
@@ -1810,8 +1815,10 @@ public class DefaultMessageStore implements MessageStore {
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    // 分发存储
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
+                                    // 如果当前为主节点，并且开启了长轮询，则消息到达的时候会进行一次通知
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
                                         && DefaultMessageStore.this.brokerConfig.isLongPollingEnable()) {
                                         DefaultMessageStore.this.messageArrivingListener.arriving(dispatchRequest.getTopic(),

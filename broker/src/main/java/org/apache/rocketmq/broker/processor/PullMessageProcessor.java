@@ -88,9 +88,9 @@ public class PullMessageProcessor implements NettyRequestProcessor {
 
     /**
      * pullMessage Broker端对应的处理
-     * @param channel
-     * @param request
-     * @param brokerAllowSuspend
+     * @param channel 网络通道
+     * @param request 消息拉取请求
+     * @param brokerAllowSuspend  Broker端是否支持挂起，处理消息时，默认传true
      * @return
      * @throws RemotingCommandException
      */
@@ -420,8 +420,11 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                     break;
                 case ResponseCode.PULL_NOT_FOUND:
 
+                    // 如果没有拉取到消息
+                    // hasSuspendFlag 为拉取消息时构建的拉取标志，默认为true
                     if (brokerAllowSuspend && hasSuspendFlag) {
                         long pollingTimeMills = suspendTimeoutMillisLong;
+
                         if (!this.brokerController.getBrokerConfig().isLongPollingEnable()) {
                             pollingTimeMills = this.brokerController.getBrokerConfig().getShortPollingTimeMills();
                         }
@@ -431,6 +434,7 @@ public class PullMessageProcessor implements NettyRequestProcessor {
                         int queueId = requestHeader.getQueueId();
                         PullRequest pullRequest = new PullRequest(request, channel, pollingTimeMills,
                             this.brokerController.getMessageStore().now(), offset, subscriptionData, messageFilter);
+                        // 提交到PullRequestHoldService线程中
                         this.brokerController.getPullRequestHoldService().suspendPullRequest(topic, queueId, pullRequest);
                         response = null;
                         break;
@@ -553,6 +557,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
             @Override
             public void run() {
                 try {
+                    // 这里又回到了Broker端处理消息拉取的入口，重点是设置brokerAllowSuspend为false，表示不支持线程挂起，
+                    // 无法获取到消息时直接返回客户端消息未找到
                     final RemotingCommand response = PullMessageProcessor.this.processRequest(channel, request, false);
 
                     if (response != null) {
