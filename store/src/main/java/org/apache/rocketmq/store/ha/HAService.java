@@ -40,6 +40,13 @@ import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.store.CommitLog;
 import org.apache.rocketmq.store.DefaultMessageStore;
 
+/**
+ * RocketMQ HA 的实现原理如下：
+ * 主服务器启动，并在特定端口上监听从服务器的连接
+ * 从服务器主动连接主服务器，主服务器接收客户端的连接，并建立相关TCP连接
+ * 从服务器主动向主服务器发送带拉取消息偏移量，主服务器解析请求并返回消息给从服务器
+ * 从服务器保存消息并继续发送新的消息同步请求
+ */
 public class HAService {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -155,10 +162,22 @@ public class HAService {
 
     /**
      * Listens to slave connections to create {@link HAConnection}.
+     * Master端监听Slave的连接
      */
     class AcceptSocketService extends ServiceThread {
+        /**
+         * Broker服务监听套接字
+         */
         private final SocketAddress socketAddressListen;
+
+        /**
+         * 服务端Socket通道，基于NIO
+         */
         private ServerSocketChannel serverSocketChannel;
+
+        /**
+         * 事件选择器，基于NIO
+         */
         private Selector selector;
 
         public AcceptSocketService(final int port) {
