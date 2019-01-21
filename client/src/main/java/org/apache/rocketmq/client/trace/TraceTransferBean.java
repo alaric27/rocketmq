@@ -21,9 +21,17 @@ import java.util.Set;
 
 /**
  * Trace transfering bean
+ * 消息追踪传输的bean
  */
 public class TraceTransferBean {
+    /**
+     * 传输的数据
+     */
     private String transData;
+
+    /**
+     * 消息id,消息keys
+     */
     private Set<String> transKey = new HashSet<String>();
 
     public String getTransData() {

@@ -150,6 +150,11 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
         return traceProducerInstance;
     }
 
+    /**
+     * 添加需要追踪的消息
+     * @param ctx data infomation
+     * @return
+     */
     @Override
     public boolean append(final Object ctx) {
         boolean result = traceContextQueue.offer((TraceContext) ctx);
@@ -211,6 +216,9 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
         }
     }
 
+    /**
+     * 异步工作线程
+     */
     class AsyncRunnable implements Runnable {
         private boolean stopped;
 
@@ -222,6 +230,7 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
                     TraceContext context = null;
                     try {
                         //get trace data element from blocking Queue — traceContextQueue
+                        // 从阻塞队列中获取追踪数据
                         context = traceContextQueue.poll(5, TimeUnit.MILLISECONDS);
                     } catch (InterruptedException e) {
                     }
@@ -233,6 +242,7 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
                 }
                 if (contexts.size() > 0) {
                     AsyncAppenderRequest request = new AsyncAppenderRequest(contexts);
+                    // 提交追踪数据任务
                     traceExecuter.submit(request);
                 } else if (AsyncTraceDispatcher.this.stopped) {
                     this.stopped = true;
@@ -242,6 +252,9 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
         }
     }
 
+    /**
+     * 异步添加追踪数据的请求类
+     */
     class AsyncAppenderRequest implements Runnable {
         List<TraceContext> contextList;
 
@@ -276,6 +289,7 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
                 TraceTransferBean traceData = TraceDataEncoder.encoderFromContextBean(context);
                 transBeanList.add(traceData);
             }
+
             for (Map.Entry<String, List<TraceTransferBean>> entry : transBeanMap.entrySet()) {
                 flushData(entry.getValue());
             }
@@ -315,12 +329,14 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
 
         /**
          * Send message trace data
+         * 发送追踪数据
          *
          * @param keySet the keyset in this batch(including msgId in original message not offsetMsgId)
          * @param data   the message trace data in this batch
          */
         private void sendTraceDataByMQ(Set<String> keySet, final String data) {
             String topic = traceTopicName;
+            // 构建需要发送的消息
             final Message message = new Message(topic, data.getBytes());
 
             // Keyset of message trace includes msgId of or original message
@@ -339,6 +355,7 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
                 };
                 if (traceBrokerSet.isEmpty()) {
                     // No cross set
+                    // 发送追踪消息
                     traceProducer.send(message, callback, 5000);
                 } else {
                     traceProducer.send(message, new MessageQueueSelector() {
@@ -366,6 +383,12 @@ public class AsyncTraceDispatcher implements TraceDispatcher {
             }
         }
 
+        /**
+         * 获取broker集合
+         * @param producer
+         * @param topic
+         * @return
+         */
         private Set<String> tryGetMessageQueueBrokerSet(DefaultMQProducerImpl producer, String topic) {
             Set<String> brokerSet = new HashSet<String>();
             TopicPublishInfo topicPublishInfo = producer.getTopicPublishInfoTable().get(topic);

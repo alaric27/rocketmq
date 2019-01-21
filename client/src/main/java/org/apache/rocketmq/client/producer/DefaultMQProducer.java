@@ -229,6 +229,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public void start() throws MQClientException {
         this.defaultMQProducerImpl.start();
+        // 当设置了消息追踪的时候，启动追踪分发器
         if (null != traceDispatcher) {
             try {
                 traceDispatcher.start(this.getNamesrvAddr());

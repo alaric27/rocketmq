@@ -297,6 +297,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         defaultMQPushConsumerImpl = new DefaultMQPushConsumerImpl(this, rpcHook);
         if (enableMsgTrace) {
             try {
+                // 如果消息追踪可用，实例化traceDispatcher，注册消息出来前后回调
                 AsyncTraceDispatcher dispatcher = new AsyncTraceDispatcher(customizedTraceTopic, rpcHook);
                 dispatcher.setHostConsumer(this.getDefaultMQPushConsumerImpl());
                 traceDispatcher = dispatcher;
@@ -583,6 +584,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.defaultMQPushConsumerImpl.start();
         if (null != traceDispatcher) {
             try {
+                // 启动消息追踪的分发器
                 traceDispatcher.start(this.getNamesrvAddr());
             } catch (MQClientException e) {
                 log.warn("trace dispatcher start failed ", e);

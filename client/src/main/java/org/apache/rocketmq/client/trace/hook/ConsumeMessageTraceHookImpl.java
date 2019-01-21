@@ -30,6 +30,9 @@ import org.apache.rocketmq.common.message.MessageExt;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 消息追踪，消费端的实现
+ */
 public class ConsumeMessageTraceHookImpl implements ConsumeMessageHook {
 
     private TraceDispatcher localDispatcher;
