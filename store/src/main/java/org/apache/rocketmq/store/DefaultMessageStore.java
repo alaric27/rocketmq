@@ -247,6 +247,7 @@ public class DefaultMessageStore implements MessageStore {
         }
         this.reputMessageService.start();
 
+        // 主从同步启动
         this.haService.start();
 
         this.createTempFile();

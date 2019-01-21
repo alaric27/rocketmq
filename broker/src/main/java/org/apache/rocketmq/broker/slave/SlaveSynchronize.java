@@ -45,13 +45,20 @@ public class SlaveSynchronize {
         this.masterAddr = masterAddr;
     }
 
+    /**
+     * 同步元数据信息
+     */
     public void syncAll() {
-        this.syncTopicConfig();
-        this.syncConsumerOffset();
-        this.syncDelayOffset();
-        this.syncSubscriptionGroupConfig();
+        this.syncTopicConfig();// 同步topic
+        this.syncConsumerOffset(); // 同步消费进度
+        this.syncDelayOffset();  // 同步延迟偏移量
+        this.syncSubscriptionGroupConfig(); // 同步订阅组配置信息
     }
 
+
+    /**
+     * 同步topic配置
+     */
     private void syncTopicConfig() {
         String masterAddrBak = this.masterAddr;
         if (masterAddrBak != null) {
@@ -76,6 +83,9 @@ public class SlaveSynchronize {
         }
     }
 
+    /**
+     * 同步消费进度
+     */
     private void syncConsumerOffset() {
         String masterAddrBak = this.masterAddr;
         if (masterAddrBak != null) {
@@ -92,6 +102,9 @@ public class SlaveSynchronize {
         }
     }
 
+    /**
+     * 同步延迟偏移量
+     */
     private void syncDelayOffset() {
         String masterAddrBak = this.masterAddr;
         if (masterAddrBak != null) {
@@ -116,6 +129,9 @@ public class SlaveSynchronize {
         }
     }
 
+    /**
+     * 同步订阅组
+     */
     private void syncSubscriptionGroupConfig() {
         String masterAddrBak = this.masterAddr;
         if (masterAddrBak != null) {

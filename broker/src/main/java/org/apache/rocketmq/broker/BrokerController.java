@@ -419,8 +419,10 @@ public class BrokerController {
                 }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
             }
 
+            // 如果是从节点则启动定时任务同步
             if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
                 if (this.messageStoreConfig.getHaMasterAddress() != null && this.messageStoreConfig.getHaMasterAddress().length() >= 6) {
+                    // 设置主节点地址，用于向主节点同步
                     this.messageStore.updateHaMasterAddress(this.messageStoreConfig.getHaMasterAddress());
                     this.updateMasterHAServerAddrPeriodically = false;
                 } else {
@@ -439,6 +441,7 @@ public class BrokerController {
                     }
                 }, 1000 * 10, 1000 * 60, TimeUnit.MILLISECONDS);
             } else {
+                // 如果是主节点，打印主从的差异
                 this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                     @Override
@@ -803,6 +806,10 @@ public class BrokerController {
     }
 
     public void start() throws Exception {
+
+        /**
+         * 消息存储相关的启动
+         */
         if (this.messageStore != null) {
             this.messageStore.start();
         }

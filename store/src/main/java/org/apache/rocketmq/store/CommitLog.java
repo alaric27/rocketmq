@@ -646,6 +646,8 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
         handleDiskFlush(result, putMessageResult, msg);
+
+        // 如果当前broker角色是SYNC_MASTER，需要确保slave同步完成消息才算消息发送成功
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
