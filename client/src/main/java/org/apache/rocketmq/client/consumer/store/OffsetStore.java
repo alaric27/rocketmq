@@ -24,47 +24,51 @@ import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
- * Offset store interface
+ * 消费进度
  */
 public interface OffsetStore {
     /**
-     * Load
+     * 从消息进度存储文件加载消息进度到内存
      */
     void load() throws MQClientException;
 
     /**
-     * Update the offset,store it in memory
+     * 更新内存中的消费进度
+     * @param mq
+     * @param offset
+     * @param increaseOnly
      */
     void updateOffset(final MessageQueue mq, final long offset, final boolean increaseOnly);
 
     /**
-     * Get offset from local storage
-     *
+     * 读取消费进度
      * @return The fetched offset
      */
     long readOffset(final MessageQueue mq, final ReadOffsetType type);
 
     /**
+     * 持久化消费进度
      * Persist all offsets,may be in local storage or remote name server
      */
     void persistAll(final Set<MessageQueue> mqs);
 
     /**
-     * Persist the offset,may be in local storage or remote name server
+     * 持久化消费进度
      */
     void persist(final MessageQueue mq);
 
     /**
-     * Remove offset
+     * 将消息队列的消费进度从内存中移出
      */
     void removeOffset(MessageQueue mq);
 
     /**
-     * @return The cloned offset table of given topic
+     * 克隆该主题下所有消息队列的消费进度
      */
     Map<MessageQueue, Long> cloneOffsetTable(String topic);
 
     /**
+     * 更新在Broker端的消费进度
      * @param mq
      * @param offset
      * @param isOneway

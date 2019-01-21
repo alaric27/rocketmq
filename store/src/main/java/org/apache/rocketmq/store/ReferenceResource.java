@@ -19,10 +19,27 @@ package org.apache.rocketmq.store;
 import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ReferenceResource {
+
+    /**
+     * 引用计数
+     */
     protected final AtomicLong refCount = new AtomicLong(1);
+
+    /**
+     * 是否可用
+     */
     protected volatile boolean available = true;
+
+    /**
+     * 是否清理干净
+     */
     protected volatile boolean cleanupOver = false;
+
+    /**
+     * 第一次shutdown时间
+     */
     private volatile long firstShutdownTimestamp = 0;
+
 
     public synchronized boolean hold() {
         if (this.isAvailable()) {
@@ -40,12 +57,17 @@ public abstract class ReferenceResource {
         return this.available;
     }
 
+    /**
+     * 关闭
+     * @param intervalForcibly
+     */
     public void shutdown(final long intervalForcibly) {
         if (this.available) {
             this.available = false;
             this.firstShutdownTimestamp = System.currentTimeMillis();
             this.release();
         } else if (this.getRefCount() > 0) {
+            // 如果当前时间已经超出最大强制清除时间，这把refCount设置为负数并进行清理
             if ((System.currentTimeMillis() - this.firstShutdownTimestamp) >= intervalForcibly) {
                 this.refCount.set(-1000 - this.getRefCount());
                 this.release();
@@ -53,6 +75,9 @@ public abstract class ReferenceResource {
         }
     }
 
+    /**
+     * 释放 每次减一，如果value小于0则执行cleanup方法
+     */
     public void release() {
         long value = this.refCount.decrementAndGet();
         if (value > 0)

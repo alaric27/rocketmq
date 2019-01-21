@@ -21,11 +21,20 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 该类是配置管理器的父类
+ * 提供配置文件，加载配置，持久化配置
+ * 提供编码，解码方法
+ */
 public abstract class ConfigManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
     public abstract String encode();
 
+    /**
+     * 加载配置文件
+     * @return
+     */
     public boolean load() {
         String fileName = null;
         try {
@@ -45,8 +54,17 @@ public abstract class ConfigManager {
         }
     }
 
+    /**
+     * 返回配置文件路径
+     * @return
+     */
     public abstract String configFilePath();
 
+
+    /**
+     * 用于在配置文件加载失败时，加载${configFile}.bak文件
+     * @return
+     */
     private boolean loadBak() {
         String fileName = null;
         try {
@@ -65,8 +83,15 @@ public abstract class ConfigManager {
         return true;
     }
 
+    /**
+     * 解码，这里返回的为空，具体由子类实现，
+     * @param jsonString
+     */
     public abstract void decode(final String jsonString);
 
+    /**
+     * 将编码的内容写入配置文件，用于持久化
+     */
     public synchronized void persist() {
         String jsonString = this.encode(true);
         if (jsonString != null) {
@@ -79,5 +104,10 @@ public abstract class ConfigManager {
         }
     }
 
+    /**
+     * 编码
+     * @param prettyFormat
+     * @return
+     */
     public abstract String encode(final boolean prettyFormat);
 }

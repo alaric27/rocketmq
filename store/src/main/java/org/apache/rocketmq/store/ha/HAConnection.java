@@ -32,11 +32,28 @@ public class HAConnection {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final HAService haService;
     private final SocketChannel socketChannel;
+    /**
+     * slave端连接地址
+     */
     private final String clientAddr;
+    /**
+     * master 向 slave写数据的服务类
+     */
     private WriteSocketService writeSocketService;
+
+    /**
+     * master 从 slave 读数据的服务类
+     */
     private ReadSocketService readSocketService;
 
+    /**
+     * 从服务器请求拉取数据的偏移量
+     */
     private volatile long slaveRequestOffset = -1;
+
+    /**
+     * 从服务器反馈已拉取完成的偏移量
+     */
     private volatile long slaveAckOffset = -1;
 
     public HAConnection(final HAService haService, final SocketChannel socketChannel) throws IOException {
@@ -78,6 +95,9 @@ public class HAConnection {
         return socketChannel;
     }
 
+    /**
+     * HA Master 网络读实现类
+     */
     class ReadSocketService extends ServiceThread {
         private static final int READ_MAX_BUFFER_SIZE = 1024 * 1024;
         private final Selector selector;
@@ -145,6 +165,10 @@ public class HAConnection {
             return ReadSocketService.class.getSimpleName();
         }
 
+        /**
+         * 处理从slave读取的数据
+         * @return
+         */
         private boolean processReadEvent() {
             int readSizeZeroTimes = 0;
 
@@ -190,6 +214,9 @@ public class HAConnection {
         }
     }
 
+    /**
+     * HA Master 网络写实现类
+     */
     class WriteSocketService extends ServiceThread {
         private final Selector selector;
         private final SocketChannel socketChannel;

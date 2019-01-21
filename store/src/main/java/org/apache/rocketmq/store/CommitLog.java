@@ -139,10 +139,21 @@ public class CommitLog {
     /**
      * Read CommitLog data, use data replication
      */
+    /**
+     * 根据offset获取消息
+     * @param offset
+     * @return
+     */
     public SelectMappedBufferResult getData(final long offset) {
         return this.getData(offset, offset == 0);
     }
 
+    /**
+     * 根据 offset 获取消息
+     * @param offset
+     * @param returnFirstOnNotFound
+     * @return
+     */
     public SelectMappedBufferResult getData(final long offset, final boolean returnFirstOnNotFound) {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, returnFirstOnNotFound);
@@ -563,8 +574,10 @@ public class CommitLog {
 
         long eclipseTimeInLock = 0;
         MappedFile unlockMappedFile = null;
+        // 获取最后一个消息文件
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
+        // 加锁串行写入
         putMessageLock.lock(); //spin or ReentrantLock ,depending on store config
         try {
             long beginLockTimestamp = this.defaultMessageStore.getSystemClock().now();
@@ -574,6 +587,7 @@ public class CommitLog {
             // global
             msg.setStoreTimestamp(beginLockTimestamp);
 
+            // 如果mappedFile
             if (null == mappedFile || mappedFile.isFull()) {
                 mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
             }
@@ -632,6 +646,8 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
         handleDiskFlush(result, putMessageResult, msg);
+
+        // 如果当前broker角色是SYNC_MASTER，需要确保slave同步完成消息才算消息发送成功
         handleHA(result, putMessageResult, msg);
 
         return putMessageResult;
@@ -806,6 +822,10 @@ public class CommitLog {
         return -1;
     }
 
+    /**
+     * 获取最小的偏移量
+     * @return
+     */
     public long getMinOffset() {
         MappedFile mappedFile = this.mappedFileQueue.getFirstMappedFile();
         if (mappedFile != null) {
@@ -819,6 +839,12 @@ public class CommitLog {
         return -1;
     }
 
+    /**
+     * 根据消息偏移量和消息长度查找消息
+     * @param offset
+     * @param size
+     * @return
+     */
     public SelectMappedBufferResult getMessage(final long offset, final int size) {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
         MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset, offset == 0);
@@ -829,6 +855,11 @@ public class CommitLog {
         return null;
     }
 
+    /**
+     * 获取下一个文件的偏移量
+     * @param offset
+     * @return
+     */
     public long rollNextFile(final long offset) {
         int mappedFileSize = this.defaultMessageStore.getMessageStoreConfig().getMapedFileSizeCommitLog();
         return offset + mappedFileSize - offset % mappedFileSize;
@@ -1329,6 +1360,15 @@ public class CommitLog {
             return result;
         }
 
+
+        /**
+         * 追加消息到byteBuffer
+         * @param fileFromOffset
+         * @param byteBuffer
+         * @param maxBlank
+         * @param messageExtBatch, backed up by a byte array
+         * @return
+         */
         public AppendMessageResult doAppend(final long fileFromOffset, final ByteBuffer byteBuffer, final int maxBlank,
             final MessageExtBatch messageExtBatch) {
             byteBuffer.mark();

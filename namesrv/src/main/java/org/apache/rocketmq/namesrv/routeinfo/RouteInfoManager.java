@@ -49,10 +49,30 @@ public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+
+    /**
+     * topic 对应的 Broker 信息
+     */
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+
+    /**
+     * brokerName 对应的Broker信息
+     */
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+
+    /**
+     * 集群里面有哪些Broker
+     */
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+
+    /**
+     * 每个broker服务器对应的Broker实时信息
+     */
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+
+    /**
+     * broker对应的过滤服务器
+     */
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -415,6 +435,10 @@ public class RouteInfoManager {
         return null;
     }
 
+
+    /**
+     * 扫描长时间没有同步心跳的broker，并清理
+     */
     public void scanNotActiveBroker() {
         Iterator<Entry<String, BrokerLiveInfo>> it = this.brokerLiveTable.entrySet().iterator();
         while (it.hasNext()) {
@@ -429,6 +453,11 @@ public class RouteInfoManager {
         }
     }
 
+    /**
+     * 当broker 和 namesrv 之间的长连接断开后，调用此方法清理broker 相关信息
+     * @param remoteAddr
+     * @param channel
+     */
     public void onChannelDestroy(String remoteAddr, Channel channel) {
         String brokerAddrFound = null;
         if (channel != null) {
@@ -741,10 +770,30 @@ public class RouteInfoManager {
     }
 }
 
+
+/**
+ * 存储Broker的实时状态
+ */
 class BrokerLiveInfo {
+
+    /**
+     * 最后一次更新时间
+     */
     private long lastUpdateTimestamp;
+
+    /**
+     * 数据版本
+     */
     private DataVersion dataVersion;
+
+    /**
+     * netty 通信通道
+     */
     private Channel channel;
+
+    /**
+     * 负载服务器地址
+     */
     private String haServerAddr;
 
     public BrokerLiveInfo(long lastUpdateTimestamp, DataVersion dataVersion, Channel channel,

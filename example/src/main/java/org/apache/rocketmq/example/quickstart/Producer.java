@@ -48,9 +48,11 @@ public class Producer {
         /*
          * Launch the instance.
          */
+        producer.setSendLatencyFaultEnable(true);
+        producer.setNamesrvAddr("172.31.85.205:9876");
         producer.start();
 
-        for (int i = 0; i < 1000; i++) {
+        for (int i = 0; i < 1; i++) {
             try {
 
                 /*

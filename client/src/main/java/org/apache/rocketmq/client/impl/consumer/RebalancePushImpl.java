@@ -211,9 +211,16 @@ public class RebalancePushImpl extends RebalanceImpl {
         return result;
     }
 
+
+    /**
+     * 分发 pullRequestList
+     * @param pullRequestList
+     */
     @Override
     public void dispatchPullRequest(List<PullRequest> pullRequestList) {
+
         for (PullRequest pullRequest : pullRequestList) {
+            // 把PullRequest 放入 pullRequestQueue 队列中，此时方法take()的阻塞，会唤醒
             this.defaultMQPushConsumerImpl.executePullRequestImmediately(pullRequest);
             log.info("doRebalance, {}, add a new pull request {}", consumerGroup, pullRequest);
         }

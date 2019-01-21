@@ -106,11 +106,31 @@ public class BrokerController {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
     private static final InternalLogger LOG_PROTECTION = InternalLoggerFactory.getLogger(LoggerName.PROTECTION_LOGGER_NAME);
     private static final InternalLogger LOG_WATER_MARK = InternalLoggerFactory.getLogger(LoggerName.WATER_MARK_LOGGER_NAME);
+    /**
+     * Broker 的配置类
+     */
     private final BrokerConfig brokerConfig;
+
+    /**
+     * Netty Server启动配置类
+     */
     private final NettyServerConfig nettyServerConfig;
+
+    /**
+     * Netty Client 启动配置类
+     */
     private final NettyClientConfig nettyClientConfig;
+
+    /**
+     * 消息存储配置
+     */
     private final MessageStoreConfig messageStoreConfig;
+
+    /**
+     * consumerOffset.json 配置文件对应的管理器
+     */
     private final ConsumerOffsetManager consumerOffsetManager;
+
     private final ConsumerManager consumerManager;
     private final ConsumerFilterManager consumerFilterManager;
     private final ProducerManager producerManager;
@@ -222,6 +242,12 @@ public class BrokerController {
         return queryThreadPoolQueue;
     }
 
+
+    /**
+     * 初始化
+     * @return
+     * @throws CloneNotSupportedException
+     */
     public boolean initialize() throws CloneNotSupportedException {
         boolean result = this.topicConfigManager.load();
 
@@ -396,8 +422,10 @@ public class BrokerController {
                 }, 1000 * 10, 1000 * 60 * 2, TimeUnit.MILLISECONDS);
             }
 
+            // 如果是从节点则启动定时任务同步
             if (BrokerRole.SLAVE == this.messageStoreConfig.getBrokerRole()) {
                 if (this.messageStoreConfig.getHaMasterAddress() != null && this.messageStoreConfig.getHaMasterAddress().length() >= 6) {
+                    // 设置主节点地址，用于向主节点同步
                     this.messageStore.updateHaMasterAddress(this.messageStoreConfig.getHaMasterAddress());
                     this.updateMasterHAServerAddrPeriodically = false;
                 } else {
@@ -416,6 +444,7 @@ public class BrokerController {
                     }
                 }, 1000 * 10, 1000 * 60, TimeUnit.MILLISECONDS);
             } else {
+                // 如果是主节点，打印主从的差异
                 this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
 
                     @Override
@@ -823,6 +852,10 @@ public class BrokerController {
     }
 
     public void start() throws Exception {
+
+        /**
+         * 消息存储相关的启动
+         */
         if (this.messageStore != null) {
             this.messageStore.start();
         }
