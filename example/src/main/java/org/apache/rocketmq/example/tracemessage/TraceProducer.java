@@ -26,10 +26,11 @@ import org.apache.rocketmq.remoting.common.RemotingHelper;
 public class TraceProducer {
     public static void main(String[] args) throws MQClientException, InterruptedException {
 
-        DefaultMQProducer producer = new DefaultMQProducer("ProducerGroupName",true);
+        DefaultMQProducer producer = new DefaultMQProducer("ProducerGroupName",true, "mytrace");
+        producer.setNamesrvAddr("172.31.85.205:9876");
         producer.start();
 
-        for (int i = 0; i < 128; i++)
+        for (int i = 0; i < 5; i++)
             try {
                 {
                     Message msg = new Message("TopicTest",

@@ -28,8 +28,17 @@ import static org.apache.rocketmq.acl.common.SessionCredentials.ACCESS_KEY;
 import static org.apache.rocketmq.acl.common.SessionCredentials.SECURITY_TOKEN;
 import static org.apache.rocketmq.acl.common.SessionCredentials.SIGNATURE;
 
+/**
+ * 客户端RPC钩子
+ */
 public class AclClientRPCHook implements RPCHook {
+
+    /**
+     * 会话凭证
+     */
     private final SessionCredentials sessionCredentials;
+
+
     protected ConcurrentHashMap<Class<? extends CommandCustomHeader>, Field[]> fieldCache =
         new ConcurrentHashMap<Class<? extends CommandCustomHeader>, Field[]>();
 
@@ -39,9 +48,15 @@ public class AclClientRPCHook implements RPCHook {
 
     @Override
     public void doBeforeRequest(String remoteAddr, RemotingCommand request) {
+
+        // 融合请求头、ACCESS_KEY、请求体，生成代签名字节流
         byte[] total = AclUtils.combineRequestContent(request,
             parseRequestContent(request, sessionCredentials.getAccessKey(), sessionCredentials.getSecurityToken()));
+
+        // 使用secretKey 对待签名的字节流签名生成signature
         String signature = AclUtils.calSignature(total, sessionCredentials.getSecretKey());
+
+        // 把Signature、AccessKey、SecurityToken 放入到RemotingCommand一起发送到服务端
         request.addExtField(SIGNATURE, signature);
         request.addExtField(ACCESS_KEY, sessionCredentials.getAccessKey());
         
@@ -56,10 +71,19 @@ public class AclClientRPCHook implements RPCHook {
 
     }
 
+
+    /**
+     * 解析请求头内容，并且加上AccessKey和SecurityToken
+     * @param request
+     * @param ak
+     * @param securityToken
+     * @return
+     */
     protected SortedMap<String, String> parseRequestContent(RemotingCommand request, String ak, String securityToken) {
         CommandCustomHeader header = request.readCustomHeader();
         // Sort property
         SortedMap<String, String> map = new TreeMap<String, String>();
+
         map.put(ACCESS_KEY, ak);
         if (securityToken != null) {
             map.put(SECURITY_TOKEN, securityToken);

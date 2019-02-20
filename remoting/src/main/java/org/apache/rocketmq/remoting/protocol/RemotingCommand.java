@@ -75,6 +75,10 @@ public class RemotingCommand {
     private int opaque = requestId.getAndIncrement();
     private int flag = 0;
     private String remark;
+
+    /**
+     * 额外的字段，有一些扩展字段会放在这里
+     */
     private HashMap<String, String> extFields;
     private transient CommandCustomHeader customHeader;
 

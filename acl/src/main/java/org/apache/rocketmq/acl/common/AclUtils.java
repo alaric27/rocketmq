@@ -29,6 +29,13 @@ import static org.apache.rocketmq.acl.common.SessionCredentials.CHARSET;
 
 public class AclUtils {
 
+
+    /**
+     * 融合消息体和请求头
+     * @param request
+     * @param fieldsMap
+     * @return
+     */
     public static byte[] combineRequestContent(RemotingCommand request, SortedMap<String, String> fieldsMap) {
         try {
             StringBuilder sb = new StringBuilder("");
