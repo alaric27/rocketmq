@@ -227,14 +227,15 @@ public class MQClientInstance {
                 case CREATE_JUST:
                     this.serviceState = ServiceState.START_FAILED;
                     // If not specified,looking address from name server
+                    // 如果namesrv地址没有配置，通过配置的rocketmq.namesrv.domain远程获取
                     if (null == this.clientConfig.getNamesrvAddr()) {
                         this.mQClientAPIImpl.fetchNameServerAddr();
                     }
-                    // Start request-response channel
+                    // 启动netty
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks
                     this.startScheduledTask();
-                    // Start pull service
+                    // 启动消息拉取服务
                     this.pullMessageService.start();
 
                     // 启动 rebalanceService服务

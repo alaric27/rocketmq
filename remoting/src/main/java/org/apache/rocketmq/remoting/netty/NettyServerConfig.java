@@ -66,14 +66,6 @@ public class NettyServerConfig implements Cloneable {
      * ByteBuffer 是否开启缓存
      */
     private boolean serverPooledByteBufAllocatorEnable = true;
-
-    /**
-     * make make install
-     *
-     *
-     * ../glibc-2.10.1/configure \ --prefix=/usr \ --with-headers=/usr/include \
-     * --host=x86_64-linux-gnu \ --build=x86_64-pc-linux-gnu \ --without-gd
-     */
     /**
      * 是否启用Epoll IO 模型
      */

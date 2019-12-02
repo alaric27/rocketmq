@@ -79,6 +79,7 @@ public class NamesrvStartup {
             return null;
         }
 
+        // 解析配置文件填充 NamesrvConfig和 NettyServerConfig
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
@@ -144,7 +145,7 @@ public class NamesrvStartup {
         }
 
         /**
-         * 注册JVM钩子函数
+         * 优雅停机，注册JVM钩子函数,在JVM进程关闭之前，先将线程池关闭，及时释放资源
          */
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
             @Override

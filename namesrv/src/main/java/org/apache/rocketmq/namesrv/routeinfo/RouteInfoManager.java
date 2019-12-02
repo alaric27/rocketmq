@@ -51,7 +51,7 @@ public class RouteInfoManager {
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
 
     /**
-     * topic 对应的 Broker 信息
+     * topic 对应的 Broker 队列信息
      */
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
 

@@ -896,6 +896,7 @@ public class BrokerController {
             @Override
             public void run() {
                 try {
+                    // Broker 发送心跳包给 NameSrv
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {
                     log.error("registerBrokerAll Exception", e);
