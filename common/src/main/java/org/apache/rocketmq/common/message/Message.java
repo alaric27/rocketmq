@@ -25,10 +25,34 @@ import java.util.Map;
 public class Message implements Serializable {
     private static final long serialVersionUID = 8445773977080406428L;
 
+    /**
+     * 主题
+     */
     private String topic;
+
+    /**
+     * 消息flag
+     * 不作处理
+     */
     private int flag;
+
+    /**
+     * 扩展属性
+     * tag: 用于消息过滤
+     * keys: Message索引建
+     * waitStoreMsgOk:消息发送时是否等消息存储完成后再返回
+     * delayTimeLevel:消息延迟级别，用于定时消息或消息重试
+     */
     private Map<String, String> properties;
+
+    /**
+     * 消息体
+     */
     private byte[] body;
+
+    /**
+     * 事务ID
+     */
     private String transactionId;
 
     public Message() {

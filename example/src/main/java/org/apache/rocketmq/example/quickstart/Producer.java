@@ -37,7 +37,7 @@ public class Producer {
 
         for (int i = 0; i < 1; i++) {
             try {
-                Message msg = new Message("TopicTest" /* Topic */,
+                Message msg = new Message("ZynTopic" /* Topic */,
                     "TagA" /* Tag */,
                     ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
