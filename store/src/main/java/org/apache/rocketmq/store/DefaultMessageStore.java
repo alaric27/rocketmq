@@ -100,6 +100,9 @@ public class DefaultMessageStore implements MessageStore {
 
     private final StoreStatsService storeStatsService;
 
+    /**
+     * 消息堆内存缓存
+     */
     private final TransientStorePool transientStorePool;
 
     private final RunningFlags runningFlags = new RunningFlags();
@@ -108,15 +111,29 @@ public class DefaultMessageStore implements MessageStore {
     private final ScheduledExecutorService scheduledExecutorService =
         Executors.newSingleThreadScheduledExecutor(new ThreadFactoryImpl("StoreScheduledThread"));
     private final BrokerStatsManager brokerStatsManager;
+
+    /**
+     * 消息拉取长轮询模式消息到达监听器
+     */
     private final MessageArrivingListener messageArrivingListener;
+
+    /**
+     * Broker 配置属性
+     */
     private final BrokerConfig brokerConfig;
 
     private volatile boolean shutdown = true;
 
+    /**
+     * 文件刷盘检查点
+     */
     private StoreCheckpoint storeCheckpoint;
 
     private AtomicLong printTimes = new AtomicLong(0);
 
+    /**
+     * CommitLog文件转发请求
+     */
     private final LinkedList<CommitLogDispatcher> dispatcherList;
 
     private RandomAccessFile lockFile;
@@ -318,6 +335,11 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 写入单条消息
+     * @param msg Message instance to store
+     * @return
+     */
     @Override
     public PutMessageResult putMessage(MessageExtBrokerInner msg) {
 
@@ -351,11 +373,13 @@ public class DefaultMessageStore implements MessageStore {
             this.printTimes.set(0);
         }
 
+        // topic 不能大于127个字符
         if (msg.getTopic().length() > Byte.MAX_VALUE) {
             log.warn("putMessage message topic length too long " + msg.getTopic().length());
             return new PutMessageResult(PutMessageStatus.MESSAGE_ILLEGAL, null);
         }
 
+        // 如果消息体内容大于 32767，则拒绝消息写入
         if (msg.getPropertiesString() != null && msg.getPropertiesString().length() > Short.MAX_VALUE) {
             log.warn("putMessage message properties length too long " + msg.getPropertiesString().length());
             return new PutMessageResult(PutMessageStatus.PROPERTIES_SIZE_EXCEEDED, null);

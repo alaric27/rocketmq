@@ -267,6 +267,7 @@ public class MappedFile extends ReferenceResource {
         assert messageExt != null;
         assert cb != null;
 
+        // 获取当前文件的写指针
         int currentPos = this.wrotePosition.get();
 
         if (currentPos < this.fileSize) {
@@ -274,6 +275,7 @@ public class MappedFile extends ReferenceResource {
             byteBuffer.position(currentPos);
             AppendMessageResult result = null;
             if (messageExt instanceof MessageExtBrokerInner) {
+                // 处理单条消息
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, (MessageExtBrokerInner) messageExt);
             } else if (messageExt instanceof MessageExtBatch) {
                 result = cb.doAppend(this.getFileFromOffset(), byteBuffer, this.fileSize - currentPos, (MessageExtBatch) messageExt);
@@ -285,6 +287,7 @@ public class MappedFile extends ReferenceResource {
             return result;
         }
         log.error("MappedFile.appendMessage return null, wrotePosition: {} fileSize: {}", currentPos, this.fileSize);
+        // 如果当前写指针大于文件大小，说明已经写满返回错误码
         return new AppendMessageResult(AppendMessageStatus.UNKNOWN_ERROR);
     }
 
