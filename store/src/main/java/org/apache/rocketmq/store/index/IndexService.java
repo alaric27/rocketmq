@@ -154,6 +154,15 @@ public class IndexService {
         }
     }
 
+    /**
+     * 根据消息key 查询消息偏移量
+     * @param topic
+     * @param key
+     * @param maxNum
+     * @param begin
+     * @param end
+     * @return
+     */
     public QueryOffsetResult queryOffset(String topic, String key, int maxNum, long begin, long end) {
         List<Long> phyOffsets = new ArrayList<Long>(maxNum);
 
@@ -163,6 +172,7 @@ public class IndexService {
         try {
             this.readWriteLock.readLock().lock();
             if (!this.indexFileList.isEmpty()) {
+                // 循环索引文件
                 for (int i = this.indexFileList.size(); i > 0; i--) {
                     IndexFile f = this.indexFileList.get(i - 1);
                     boolean lastFile = i == this.indexFileList.size();
@@ -198,6 +208,10 @@ public class IndexService {
         return topic + "#" + key;
     }
 
+    /**
+     * 消息转发时建立索引
+     * @param req
+     */
     public void buildIndex(DispatchRequest req) {
         IndexFile indexFile = retryGetAndCreateIndexFile();
         if (indexFile != null) {
@@ -220,6 +234,7 @@ public class IndexService {
             }
 
             if (req.getUniqKey() != null) {
+                //
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
                     log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
@@ -261,6 +276,7 @@ public class IndexService {
     }
 
     /**
+     * 创建获取Index 文件
      * Retries to get or create index file.
      *
      * @return {@link IndexFile} or null on failure.

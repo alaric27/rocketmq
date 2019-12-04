@@ -490,6 +490,11 @@ public class ConsumeQueue {
         }
     }
 
+    /**
+     * 根据起始索引，获取可读的消息
+     * @param startIndex
+     * @return
+     */
     public SelectMappedBufferResult getIndexBuffer(final long startIndex) {
         int mappedFileSize = this.mappedFileSize;
         long offset = startIndex * CQ_STORE_UNIT_SIZE;

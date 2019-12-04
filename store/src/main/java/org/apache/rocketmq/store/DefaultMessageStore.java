@@ -199,6 +199,7 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
+            // 上次退出是否为正常退出
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
@@ -206,18 +207,21 @@ public class DefaultMessageStore implements MessageStore {
                 result = result && this.scheduleMessageService.load();
             }
 
-            // load Commit Log
+            // 加载commit log 文件
             result = result && this.commitLog.load();
 
-            // load Consume Queue
+            // 加载consume queue 文件
             result = result && this.loadConsumeQueue();
 
             if (result) {
+                // 加载checkpoint 文件
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
+                // 加载index文件
                 this.indexService.load(lastExitOK);
 
+                // 恢复,为了解决由于某种原因造成的commit log文件和index、consume queue文件不一致的情况
                 this.recover(lastExitOK);
 
                 log.info("load over, and the max phy offset = {}", this.getMaxPhyOffset());
@@ -262,6 +266,7 @@ public class DefaultMessageStore implements MessageStore {
         } else {
             this.reputMessageService.setReputFromOffset(this.commitLog.getMaxOffset());
         }
+        // 启动消息转发服务，主要是把消息从CommitLog文件，转发到Index和消费队列文件
         this.reputMessageService.start();
 
         // 主从同步启动
@@ -1300,6 +1305,12 @@ public class DefaultMessageStore implements MessageStore {
         }
     }
 
+    /**
+     * 判断 abort文件是否存在，用于判读上次退出是否为正常退出
+     * 实现机制为，Broke在启动的时候创建abort文件，在正常退出是通过注册的JVM钩子函数删除该文件
+     * 如果该文件存在则说明为异常退出
+     * @return
+     */
     private boolean isTempFileExist() {
         String fileName = StorePathConfigHelper.getAbortFile(this.messageStoreConfig.getStorePathRootDir());
         File file = new File(fileName);
@@ -1347,8 +1358,10 @@ public class DefaultMessageStore implements MessageStore {
         long maxPhyOffsetOfConsumeQueue = this.recoverConsumeQueue();
 
         if (lastExitOK) {
+            // 正常恢复
             this.commitLog.recoverNormally(maxPhyOffsetOfConsumeQueue);
         } else {
+            // 异常恢复
             this.commitLog.recoverAbnormally(maxPhyOffsetOfConsumeQueue);
         }
 
@@ -1443,7 +1456,6 @@ public class DefaultMessageStore implements MessageStore {
     public void putMessagePositionInfo(DispatchRequest dispatchRequest) {
         // 根据 主题和队列ID获取对应的ConsumeQueue 文件
         ConsumeQueue cq = this.findConsumeQueue(dispatchRequest.getTopic(), dispatchRequest.getQueueId());
-        //
         cq.putMessagePositionInfoWrapper(dispatchRequest);
     }
 

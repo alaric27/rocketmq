@@ -27,6 +27,13 @@ import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * checkpoint 文件对应的存储类
+ * 该文件只用了前24字节
+ * physicMsgTimestamp： commitLog文件刷盘时间
+ * logicsMsgTimestamp: 消费队列文件刷盘时间
+ * indexMsgTimestamp: 索引文件刷盘时间
+ */
 public class StoreCheckpoint {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final RandomAccessFile randomAccessFile;
