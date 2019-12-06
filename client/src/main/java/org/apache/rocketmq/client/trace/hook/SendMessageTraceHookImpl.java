@@ -42,6 +42,10 @@ public class SendMessageTraceHookImpl implements SendMessageHook {
         return "SendMessageTraceHook";
     }
 
+    /**
+     * 消息发送前执行
+     * @param context
+     */
     @Override
     public void sendMessageBefore(SendMessageContext context) {
         //if it is message trace data,then it doesn't recorded
@@ -65,6 +69,10 @@ public class SendMessageTraceHookImpl implements SendMessageHook {
         tuxeContext.getTraceBeans().add(traceBean);
     }
 
+    /**
+     * 发送消息后执行
+     * @param context
+     */
     @Override
     public void sendMessageAfter(SendMessageContext context) {
         //if it is message trace data,then it doesn't recorded
