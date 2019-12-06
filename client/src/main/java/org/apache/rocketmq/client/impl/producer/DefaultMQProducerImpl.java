@@ -332,6 +332,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         exception = e;
                     }
 
+                    // 处理事务状态
                     this.processTransactionState(
                         localTransactionState,
                         group,
@@ -341,6 +342,12 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
             }
 
+            /**
+             * 处理事务状态
+             * @param localTransactionState
+             * @param producerGroup
+             * @param exception
+             */
             private void processTransactionState(
                 final LocalTransactionState localTransactionState,
                 final String producerGroup,
@@ -379,6 +386,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 }
 
                 try {
+                    // 向broker 发送本地事务结果
                     DefaultMQProducerImpl.this.mQClientFactory.getMQClientAPIImpl().endTransactionOneway(brokerAddr, thisHeader, remark,
                         3000);
                 } catch (Exception e) {
@@ -1190,6 +1198,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         Validators.checkMessage(msg, this.defaultMQProducer);
 
         SendResult sendResult = null;
+        // 添加属性TRAN_MSG和 PGROUP,分别表示消息为prepare消息、消息所属消息生产者组
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_TRANSACTION_PREPARED, "true");
         MessageAccessor.putProperty(msg, MessageConst.PROPERTY_PRODUCER_GROUP, this.defaultMQProducer.getProducerGroup());
         try {
@@ -1243,6 +1252,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
         }
 
         try {
+            // 结束事务 提交或回滚
             this.endTransaction(sendResult, localTransactionState, localException);
         } catch (Exception e) {
             log.warn("local transaction execute " + localTransactionState + ", but end broker transaction failed", e);
@@ -1289,6 +1299,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_ROLLBACK_TYPE);
                 break;
             case UNKNOW:
+                // 当返回的为UNKNOW时，设置为TRANSACTION_NOT_TYPE， 在broker 不做任何处理
                 requestHeader.setCommitOrRollback(MessageSysFlag.TRANSACTION_NOT_TYPE);
                 break;
             default:

@@ -54,6 +54,9 @@ public class HAService {
 
     private final List<HAConnection> connectionList = new LinkedList<>();
 
+    /**
+     * HA Master 端监听客户端连接实现类
+     */
     private final AcceptSocketService acceptSocketService;
 
     private final DefaultMessageStore defaultMessageStore;
@@ -66,6 +69,9 @@ public class HAService {
      */
     private final GroupTransferService groupTransferService;
 
+    /**
+     * HA Client端实现类
+     */
     private final HAClient haClient;
 
     public HAService(final DefaultMessageStore defaultMessageStore) throws IOException {
@@ -278,6 +284,7 @@ public class HAService {
 
     /**
      * 主从同步通知实现类
+     * 该类的职责是 负责当主从同步复制结束后通知由于等待HA同步结果而阻塞的消息发送者线程
      * GroupTransferService Service
      */
     class GroupTransferService extends ServiceThread {

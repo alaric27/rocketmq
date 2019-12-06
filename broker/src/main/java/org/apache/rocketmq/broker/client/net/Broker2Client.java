@@ -68,6 +68,8 @@ public class Broker2Client {
             RemotingCommand.createRequestCommand(RequestCode.CHECK_TRANSACTION_STATE, requestHeader);
         request.setBody(MessageDecoder.encode(messageExt, false));
         try {
+            // 这里之所以发送Oneway消息，是因为在客户端回查成功后会发送Commit消息
+            // 处理逻辑在 ClientRemotingProssor
             this.brokerController.getRemotingServer().invokeOneway(channel, request, 10);
         } catch (Exception e) {
             log.error("Check transaction failed because invoke producer exception. group={}, msgId={}", group, messageExt.getMsgId(), e.getMessage());
