@@ -203,6 +203,7 @@ public class DefaultMessageStore implements MessageStore {
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
+            //
             if (null != scheduleMessageService) {
                 result = result && this.scheduleMessageService.load();
             }
@@ -502,9 +503,10 @@ public class DefaultMessageStore implements MessageStore {
      * @param messageFilter 消息过滤器
      * @return
      */
+    @Override
     public GetMessageResult getMessage(final String group, final String topic, final int queueId, final long offset,
-        final int maxMsgNums,
-        final MessageFilter messageFilter) {
+                                       final int maxMsgNums,
+                                       final MessageFilter messageFilter) {
         if (this.shutdown) {
             log.warn("message store has shutdown, so getMessage is forbidden");
             return null;
@@ -607,6 +609,7 @@ public class DefaultMessageStore implements MessageStore {
                                 continue;
                             }
 
+                            // 根据消息偏移量和消息长度查询消息
                             SelectMappedBufferResult selectResult = this.commitLog.getMessage(offsetPy, sizePy);
                             if (null == selectResult) {
                                 if (getResult.getBufferTotalSize() == 0) {
@@ -1241,8 +1244,12 @@ public class DefaultMessageStore implements MessageStore {
         log.info(fileName + (result ? " create OK" : " already exists"));
     }
 
+    /**
+     * 启动定时任务
+     */
     private void addScheduleTask() {
 
+        // 周期性地清除过期文件
         this.scheduledExecutorService.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
@@ -1287,7 +1294,9 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void cleanFilesPeriodically() {
+        // 清理 commitlog
         this.cleanCommitLogService.run();
+        // 清理 consume queue
         this.cleanConsumeQueueService.run();
     }
 
@@ -1317,6 +1326,7 @@ public class DefaultMessageStore implements MessageStore {
         return file.exists();
     }
 
+    // broker启动时加载consumeQueue
     private boolean loadConsumeQueue() {
         File dirLogic = new File(StorePathConfigHelper.getStorePathConsumeQueue(this.messageStoreConfig.getStorePathRootDir()));
         File[] fileTopicList = dirLogic.listFiles();
@@ -1554,7 +1564,9 @@ public class DefaultMessageStore implements MessageStore {
 
         private void deleteExpiredFiles() {
             int deleteCount = 0;
+            // 文件保留时间
             long fileReservedTime = DefaultMessageStore.this.getMessageStoreConfig().getFileReservedTime();
+            // 删除物理文件的间隔
             int deletePhysicFilesInterval = DefaultMessageStore.this.getMessageStoreConfig().getDeleteCommitLogFilesInterval();
             int destroyMapedFileIntervalForcibly = DefaultMessageStore.this.getMessageStoreConfig().getDestroyMapedFileIntervalForcibly();
 
@@ -1562,6 +1574,12 @@ public class DefaultMessageStore implements MessageStore {
             boolean spacefull = this.isSpaceToDelete();
             boolean manualDelete = this.manualDeleteFileSeveralTimes > 0;
 
+            /**
+             * mq 会在三种情况下删除文件
+             * 1、deleteWhen设置一天的固定时间执行一次删除过期文件操作，默认为凌晨4点
+             * 2、磁盘是否充足
+             * 3、手工触发
+             */
             if (timeup || spacefull || manualDelete) {
 
                 if (manualDelete)
@@ -1613,13 +1631,19 @@ public class DefaultMessageStore implements MessageStore {
             return false;
         }
 
+        /**
+         * 磁盘是否充足
+         * @return
+         */
         private boolean isSpaceToDelete() {
+            // diskMaxUsedSpaceRatio 磁盘分区最大使用率
             double ratio = DefaultMessageStore.this.getMessageStoreConfig().getDiskMaxUsedSpaceRatio() / 100.0;
-
+            // 表示是否需要立即执行清除过期文件操作
             cleanImmediately = false;
 
             {
                 String storePathPhysic = DefaultMessageStore.this.getMessageStoreConfig().getStorePathCommitLog();
+                // 当前磁盘使用率
                 double physicRatio = UtilAll.getDiskPartitionSpaceUsedPercent(storePathPhysic);
                 if (physicRatio > diskSpaceWarningLevelRatio) {
                     boolean diskok = DefaultMessageStore.this.runningFlags.getAndMakeDiskFull();

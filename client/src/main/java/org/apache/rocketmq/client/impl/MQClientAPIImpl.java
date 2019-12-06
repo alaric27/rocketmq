@@ -733,6 +733,13 @@ public class MQClientAPIImpl {
         throw new MQBrokerException(response.getCode(), response.getRemark());
     }
 
+    /**
+     * 根据消费组从broke 查询消费者ID
+     * @param addr broke 地址
+     * @param consumerGroup 消费组
+     * @param timeoutMillis
+     * @return
+     */
     public List<String> getConsumerIdListByGroup(
         final String addr,
         final String consumerGroup,

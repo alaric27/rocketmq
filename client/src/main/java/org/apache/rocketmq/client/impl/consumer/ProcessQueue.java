@@ -53,6 +53,10 @@ public class ProcessQueue {
      * ProcessQueue 中总消息数
      */
     private final AtomicLong msgCount = new AtomicLong();
+
+    /**
+     * 消息大小
+     */
     private final AtomicLong msgSize = new AtomicLong();
     private final Lock lockConsume = new ReentrantLock();
     /**

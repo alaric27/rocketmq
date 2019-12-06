@@ -1079,8 +1079,14 @@ public class CommitLog {
     }
 
     public static class GroupCommitRequest {
+        /**
+         * 刷盘点偏移量
+         */
         private final long nextOffset;
         private final CountDownLatch countDownLatch = new CountDownLatch(1);
+        /**
+         * 刷盘结果
+         */
         private volatile boolean flushOK = false;
 
         public GroupCommitRequest(long nextOffset) {

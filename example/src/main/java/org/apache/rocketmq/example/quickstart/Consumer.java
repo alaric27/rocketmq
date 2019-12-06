@@ -32,11 +32,11 @@ public class Consumer {
 
     public static void main(String[] args) throws InterruptedException, MQClientException {
 
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("please_rename_unique_group_name_4");
-        consumer.setNamesrvAddr("172.31.85.205:9876");
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("please_rename_unique_group_name");
+        consumer.setNamesrvAddr("101.200.50.131:9876");
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
 
-        consumer.subscribe("ZynTopic", "*");
+        consumer.subscribe("Zyn2Topic", "*");
         consumer.registerMessageListener(new MessageListenerConcurrently() {
 
             @Override

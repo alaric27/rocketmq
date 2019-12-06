@@ -114,9 +114,19 @@ public class RebalanceLockManager {
         return false;
     }
 
+    /**
+     * 消费端发起锁定消息队列对应的处理
+     * @param group
+     * @param mqs
+     * @param clientId
+     * @return
+     */
     public Set<MessageQueue> tryLockBatch(final String group, final Set<MessageQueue> mqs,
         final String clientId) {
+        // 当前客户端已经锁定的队列
         Set<MessageQueue> lockedMqs = new HashSet<MessageQueue>(mqs.size());
+
+        // 当前客户端未锁定的队列
         Set<MessageQueue> notLockedMqs = new HashSet<MessageQueue>(mqs.size());
 
         for (MessageQueue mq : mqs) {
@@ -137,6 +147,7 @@ public class RebalanceLockManager {
                         this.mqLockTable.put(group, groupValue);
                     }
 
+                    // 处理MessageQueue未被任何client锁定的情况,分配给当前客户端
                     for (MessageQueue mq : notLockedMqs) {
                         LockEntry lockEntry = groupValue.get(mq);
                         if (null == lockEntry) {
@@ -158,6 +169,7 @@ public class RebalanceLockManager {
 
                         String oldClientId = lockEntry.getClientId();
 
+                        // 处理之前的锁定已经过期的情况
                         if (lockEntry.isExpired()) {
                             lockEntry.setClientId(clientId);
                             lockEntry.setLastUpdateTimestamp(System.currentTimeMillis());

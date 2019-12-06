@@ -25,19 +25,47 @@ import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 
+/**
+ * 发送消息请求头
+ */
 public class SendMessageRequestHeader implements CommandCustomHeader {
+
+    /**
+     * 生产者组
+     */
     @CFNotNull
     private String producerGroup;
+
+    /**
+     * 主题
+     */
     @CFNotNull
     private String topic;
+
+    /**
+     * 默认主题
+     */
     @CFNotNull
     private String defaultTopic;
+
+    /**
+     * 默认主题的队列个数
+     */
     @CFNotNull
     private Integer defaultTopicQueueNums;
+
+    /**
+     * 队列ID
+     */
     @CFNotNull
     private Integer queueId;
+
+    /**
+     * 消息标识
+     */
     @CFNotNull
     private Integer sysFlag;
+
     @CFNotNull
     private Long bornTimestamp;
     @CFNotNull

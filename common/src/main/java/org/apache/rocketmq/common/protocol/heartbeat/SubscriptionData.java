@@ -26,16 +26,51 @@ import org.apache.rocketmq.common.filter.ExpressionType;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * 这个类是用来形容要订阅什么样的消息数据
+ */
 public class SubscriptionData implements Comparable<SubscriptionData> {
+
+    /**
+     * 订阅所有
+     */
     public final static String SUB_ALL = "*";
+
+    /**
+     * Consumer端过滤相关的，用户自定义过滤类时才会用
+     */
     private boolean classFilterMode = false;
+
     private String topic;
+
+    /**
+     * 订阅的标示,如expressionType默认TAG时，这里可以填写"A||B"
+     */
     private String subString;
+
+    /**
+     * topic下订阅的标签tag
+     */
     private Set<String> tagsSet = new HashSet<String>();
+
+    /**
+     * 每个tag对应的hashCode
+     */
     private Set<Integer> codeSet = new HashSet<Integer>();
+
+    /**
+     * 版本,通过时间来实现
+     */
     private long subVersion = System.currentTimeMillis();
+
+    /**
+     * TAG或SQL92
+     */
     private String expressionType = ExpressionType.TAG;
 
+    /**
+     * Consumer端过滤相关的，用户自定义过滤类时才会用
+     */
     @JSONField(serialize = false)
     private String filterClassSource;
 

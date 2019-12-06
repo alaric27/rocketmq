@@ -189,7 +189,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                 //创建MQClientInstance
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQProducer, rpcHook);
 
-                // 将producer注册到MQClientInstance.producerTbale
+                // 将producer注册到MQClientInstance.producerTable
                 boolean registerOK = mQClientFactory.registerProducer(this.defaultMQProducer.getProducerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;

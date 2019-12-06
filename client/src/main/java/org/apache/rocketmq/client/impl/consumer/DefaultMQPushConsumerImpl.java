@@ -265,6 +265,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             }
         } else {
             if (processQueue.isLocked()) {
+                // 如果是首次拉取首先计算拉取偏移量，然后拉取
                 if (!pullRequest.isLockedFirst()) {
                     final long offset = this.rebalanceImpl.computePullFromWhere(pullRequest.getMessageQueue());
                     boolean brokerBusy = offset < pullRequest.getNextOffset();
@@ -279,6 +280,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     pullRequest.setNextOffset(offset);
                 }
             } else {
+                // 如果未锁定，延迟3s后拉取
                 this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_EXCEPTION);
                 log.info("pull message later because not locked in broker, {}", pullRequest);
                 return;
@@ -581,7 +583,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 // 检查配置
                 this.checkConfig();
 
-                //
+                // 构建主题订阅信息
                 this.copySubscription();
 
                 // 把实例名称修改为 PID
@@ -622,6 +624,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                 // 根据是否顺序消息，创建消费端消费线程服务
                 if (this.getMessageListenerInner() instanceof MessageListenerOrderly) {
+                    // 设置顺序消费标识
                     this.consumeOrderly = true;
                     this.consumeMessageService =
                         new ConsumeMessageOrderlyService(this, (MessageListenerOrderly) this.getMessageListenerInner());

@@ -21,10 +21,12 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+/**
+ * 查询消息返回
+ */
 public class GetMessageResult {
 
-    private final List<SelectMappedBufferResult> messageMapedList =
-        new ArrayList<SelectMappedBufferResult>(100);
+    private final List<SelectMappedBufferResult> messageMapedList = new ArrayList<SelectMappedBufferResult>(100);
 
     private final List<ByteBuffer> messageBufferList = new ArrayList<ByteBuffer>(100);
 

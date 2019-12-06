@@ -30,7 +30,6 @@ public class Message implements Serializable {
      */
     private String topic;
 
-    // todo 有何用处
     /**
      * 消息flag
      */
