@@ -61,7 +61,7 @@ public class SlaveSynchronize {
      */
     private void syncTopicConfig() {
         String masterAddrBak = this.masterAddr;
-        if (masterAddrBak != null) {
+        if (masterAddrBak != null && !masterAddrBak.equals(brokerController.getBrokerAddr())) {
             try {
                 TopicConfigSerializeWrapper topicWrapper =
                     this.brokerController.getBrokerOuterAPI().getAllTopicConfig(masterAddrBak);
@@ -88,7 +88,7 @@ public class SlaveSynchronize {
      */
     private void syncConsumerOffset() {
         String masterAddrBak = this.masterAddr;
-        if (masterAddrBak != null) {
+        if (masterAddrBak != null && !masterAddrBak.equals(brokerController.getBrokerAddr())) {
             try {
                 ConsumerOffsetSerializeWrapper offsetWrapper =
                     this.brokerController.getBrokerOuterAPI().getAllConsumerOffset(masterAddrBak);
@@ -107,7 +107,7 @@ public class SlaveSynchronize {
      */
     private void syncDelayOffset() {
         String masterAddrBak = this.masterAddr;
-        if (masterAddrBak != null) {
+        if (masterAddrBak != null && !masterAddrBak.equals(brokerController.getBrokerAddr())) {
             try {
                 String delayOffset =
                     this.brokerController.getBrokerOuterAPI().getAllDelayOffset(masterAddrBak);
@@ -134,7 +134,7 @@ public class SlaveSynchronize {
      */
     private void syncSubscriptionGroupConfig() {
         String masterAddrBak = this.masterAddr;
-        if (masterAddrBak != null) {
+        if (masterAddrBak != null  && !masterAddrBak.equals(brokerController.getBrokerAddr())) {
             try {
                 SubscriptionGroupWrapper subscriptionWrapper =
                     this.brokerController.getBrokerOuterAPI()

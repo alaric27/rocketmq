@@ -47,6 +47,8 @@ public class MessageSysFlag {
      * 事务回滚消息
      */
     public final static int TRANSACTION_ROLLBACK_TYPE = 0x3 << 2;
+    public final static int BORNHOST_V6_FLAG = 0x1 << 4;
+    public final static int STOREHOSTADDRESS_V6_FLAG = 0x1 << 5;
 
     public static int getTransactionValue(final int flag) {
         return flag & TRANSACTION_ROLLBACK_TYPE;
@@ -59,4 +61,5 @@ public class MessageSysFlag {
     public static int clearCompressedFlag(final int flag) {
         return flag & (~COMPRESSED_FLAG);
     }
+
 }

@@ -83,7 +83,7 @@ public interface MQAdmin {
     long earliestMsgStoreTime(final MessageQueue mq) throws MQClientException;
 
     /**
-     * Query message according tto message id
+     * Query message according to message id
      * 根据消息偏移量查找消息
      *
      * @param offsetMsgId message id

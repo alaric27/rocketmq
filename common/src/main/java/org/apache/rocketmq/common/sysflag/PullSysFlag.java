@@ -20,7 +20,7 @@ public class PullSysFlag {
     /**
      * 消费进度
      */
-    private final static int FLAG_COMMIT_OFFSET = 0x1 << 0;
+    private final static int FLAG_COMMIT_OFFSET = 0x1;
     /**
      * 消息拉取是否支持挂起
      */

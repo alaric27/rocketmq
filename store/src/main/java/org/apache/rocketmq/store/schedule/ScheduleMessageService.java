@@ -19,11 +19,11 @@ package org.apache.rocketmq.store.schedule;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.rocketmq.common.ConfigManager;
 import org.apache.rocketmq.common.TopicFilterType;
 import org.apache.rocketmq.common.constant.LoggerName;
@@ -38,6 +38,7 @@ import org.apache.rocketmq.store.ConsumeQueue;
 import org.apache.rocketmq.store.ConsumeQueueExt;
 import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.MessageExtBrokerInner;
+import org.apache.rocketmq.store.MessageStore;
 import org.apache.rocketmq.store.PutMessageResult;
 import org.apache.rocketmq.store.PutMessageStatus;
 import org.apache.rocketmq.store.SelectMappedBufferResult;
@@ -80,14 +81,10 @@ public class ScheduleMessageService extends ConfigManager {
      */
     private final ConcurrentMap<Integer /* level */, Long/* offset */> offsetTable =
         new ConcurrentHashMap<Integer, Long>(32);
-
-    private final Timer timer = new Timer("ScheduleMessageTimerThread", true);
-
-    /**
-     * 默认消息存储器
-     */
     private final DefaultMessageStore defaultMessageStore;
-
+    private final AtomicBoolean started = new AtomicBoolean(false);
+    private Timer timer;
+    private MessageStore writeMessageStore;
     /**
      * 最大消息延迟级别
      */
@@ -95,6 +92,7 @@ public class ScheduleMessageService extends ConfigManager {
 
     public ScheduleMessageService(final DefaultMessageStore defaultMessageStore) {
         this.defaultMessageStore = defaultMessageStore;
+        this.writeMessageStore = defaultMessageStore;
     }
 
     public static int queueId2DelayLevel(final int queueId) {
@@ -105,10 +103,18 @@ public class ScheduleMessageService extends ConfigManager {
         return delayLevel - 1;
     }
 
+    /**
+     * @param writeMessageStore
+     *     the writeMessageStore to set
+     */
+    public void setWriteMessageStore(MessageStore writeMessageStore) {
+        this.writeMessageStore = writeMessageStore;
+    }
+
     public void buildRunningStats(HashMap<String, String> stats) {
-        Iterator<Entry<Integer, Long>> it = this.offsetTable.entrySet().iterator();
+        Iterator<Map.Entry<Integer, Long>> it = this.offsetTable.entrySet().iterator();
         while (it.hasNext()) {
-            Entry<Integer, Long> next = it.next();
+            Map.Entry<Integer, Long> next = it.next();
             int queueId = delayLevel2QueueId(next.getKey());
             long delayOffset = next.getValue();
             long maxOffset = this.defaultMessageStore.getMaxOffsetInQueue(SCHEDULE_TOPIC, queueId);
@@ -132,36 +138,46 @@ public class ScheduleMessageService extends ConfigManager {
     }
 
     public void start() {
-
-        for (Map.Entry<Integer, Long> entry : this.delayLevelTable.entrySet()) {
-            Integer level = entry.getKey();
-            Long timeDelay = entry.getValue();
-            Long offset = this.offsetTable.get(level);
-            if (null == offset) {
-                offset = 0L;
-            }
+        if (started.compareAndSet(false, true)) {
+            this.timer = new Timer("ScheduleMessageTimerThread", true);
+            for (Map.Entry<Integer, Long> entry : this.delayLevelTable.entrySet()) {
+                Integer level = entry.getKey();
+                Long timeDelay = entry.getValue();
+                Long offset = this.offsetTable.get(level);
+                if (null == offset) {
+                    offset = 0L;
+                }
             // 启动 延迟队列消费，根据timeDelay个数创建消费任务
-            if (timeDelay != null) {
-                this.timer.schedule(new DeliverDelayedMessageTimerTask(level, offset), FIRST_DELAY_TIME);
-            }
-        }
-
-        // 周期性把延迟消费队列的内容持久化
-        this.timer.scheduleAtFixedRate(new TimerTask() {
-
-            @Override
-            public void run() {
-                try {
-                    ScheduleMessageService.this.persist();
-                } catch (Throwable e) {
-                    log.error("scheduleAtFixedRate flush exception", e);
+                if (timeDelay != null) {
+                    this.timer.schedule(new DeliverDelayedMessageTimerTask(level, offset), FIRST_DELAY_TIME);
                 }
             }
-        }, 10000, this.defaultMessageStore.getMessageStoreConfig().getFlushDelayOffsetInterval());
+
+            // 周期性把延迟消费队列的内容持久化
+        this.timer.scheduleAtFixedRate(new TimerTask() {
+
+                @Override
+                public void run() {
+                    try {
+                        if (started.get()) ScheduleMessageService.this.persist();
+                    } catch (Throwable e) {
+                        log.error("scheduleAtFixedRate flush exception", e);
+                    }
+                }
+            }, 10000, this.defaultMessageStore.getMessageStoreConfig().getFlushDelayOffsetInterval());
+        }
     }
 
     public void shutdown() {
-        this.timer.cancel();
+        if (this.started.compareAndSet(true, false)) {
+            if (null != this.timer)
+                this.timer.cancel();
+        }
+
+    }
+
+    public boolean isStarted() {
+        return started.get();
     }
 
     public int getMaxDelayLevel() {
@@ -245,7 +261,9 @@ public class ScheduleMessageService extends ConfigManager {
         @Override
         public void run() {
             try {
-                this.executeOnTimeup();
+                if (isStarted()) {
+                    this.executeOnTimeup();
+                }
             } catch (Exception e) {
                 // XXX: warn and notify me
                 log.error("ScheduleMessageService, executeOnTimeup exception", e);
@@ -321,7 +339,7 @@ public class ScheduleMessageService extends ConfigManager {
                                         // 重新投递到原本的topic与queue下
                                         MessageExtBrokerInner msgInner = this.messageTimeup(msgExt);
                                         PutMessageResult putMessageResult =
-                                            ScheduleMessageService.this.defaultMessageStore
+                                            ScheduleMessageService.this.writeMessageStore
                                                 .putMessage(msgInner);
 
                                         if (putMessageResult != null
