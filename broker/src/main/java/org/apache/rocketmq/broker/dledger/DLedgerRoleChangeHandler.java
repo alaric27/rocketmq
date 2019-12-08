@@ -46,6 +46,11 @@ public class DLedgerRoleChangeHandler implements DLedgerLeaderElector.RoleChange
         this.dLegerServer = dLedgerCommitLog.getdLedgerServer();
     }
 
+    /**
+     * 处理节点状态转换
+     * @param term
+     * @param role
+     */
     @Override public void handle(long term, MemberState.Role role) {
         Runnable runnable = new Runnable() {
             @Override public void run() {
