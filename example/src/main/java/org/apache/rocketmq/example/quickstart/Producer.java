@@ -27,12 +27,11 @@ import org.apache.rocketmq.remoting.common.RemotingHelper;
  */
 public class Producer {
     public static void main(String[] args) throws MQClientException, InterruptedException {
-        // todo 队列个数如何创建
         DefaultMQProducer producer = new DefaultMQProducer("please_rename_unique_group_name");
         producer.setNamesrvAddr("101.200.50.131:9876");
         producer.start();
 
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < 5; i++) {
             try {
                 Message msg = new Message("Zyn2Topic" /* Topic */,
                     "TagA" /* Tag */,

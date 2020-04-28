@@ -1295,7 +1295,7 @@ public class DefaultMQProducerImpl implements MQProducerInner {
                         localTransactionState = localTransactionExecuter.executeLocalTransactionBranch(msg, arg);
                     } else if (transactionListener != null) {
                         log.debug("Used new transaction API");
-                        // 如果消息发送成功 记录消息的本地事务状态,这里返回的应该是LocalTransactionState.UNKNOW，
+                        // 如果消息发送成功 记录消息的本地事务状态
                         // 具体的本地事务是否成功应该由mq回查
                         localTransactionState = transactionListener.executeLocalTransaction(msg, arg);
                     }
