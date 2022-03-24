@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -84,7 +85,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
     private final AtomicReference<List<String>> namesrvAddrList = new AtomicReference<List<String>>();
     private final AtomicReference<String> namesrvAddrChoosed = new AtomicReference<String>();
     private final AtomicInteger namesrvIndex = new AtomicInteger(initValueIndex());
-    private final Lock lockNamesrvChannel = new ReentrantLock();
+    private final Lock namesrvChannelLock = new ReentrantLock();
 
     private final ExecutorService publicExecutor;
 
@@ -165,8 +166,6 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
             .option(ChannelOption.TCP_NODELAY, true)
             .option(ChannelOption.SO_KEEPALIVE, false)
             .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, nettyClientConfig.getConnectTimeoutMillis())
-            .option(ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize())
-            .option(ChannelOption.SO_RCVBUF, nettyClientConfig.getClientSocketRcvBufSize())
             .handler(new ChannelInitializer<SocketChannel>() {
                 @Override
                 public void initChannel(SocketChannel ch) throws Exception {
@@ -188,6 +187,20 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                         new NettyClientHandler());
                 }
             });
+        if (nettyClientConfig.getClientSocketSndBufSize() > 0) {
+            log.info("client set SO_SNDBUF to {}", nettyClientConfig.getClientSocketSndBufSize());
+            handler.option(ChannelOption.SO_SNDBUF, nettyClientConfig.getClientSocketSndBufSize());
+        }
+        if (nettyClientConfig.getClientSocketRcvBufSize() > 0) {
+            log.info("client set SO_RCVBUF to {}", nettyClientConfig.getClientSocketRcvBufSize());
+            handler.option(ChannelOption.SO_RCVBUF, nettyClientConfig.getClientSocketRcvBufSize());
+        }
+        if (nettyClientConfig.getWriteBufferLowWaterMark() > 0 && nettyClientConfig.getWriteBufferHighWaterMark() > 0) {
+            log.info("client set netty WRITE_BUFFER_WATER_MARK to {},{}",
+                    nettyClientConfig.getWriteBufferLowWaterMark(), nettyClientConfig.getWriteBufferHighWaterMark());
+            handler.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(
+                    nettyClientConfig.getWriteBufferLowWaterMark(), nettyClientConfig.getWriteBufferHighWaterMark()));
+        }
 
         this.timer.scheduleAtFixedRate(new TimerTask() {
             @Override
@@ -354,6 +367,10 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 Collections.shuffle(addrs);
                 log.info("name server address updated. NEW : {} , OLD: {}", addrs, old);
                 this.namesrvAddrList.set(addrs);
+
+                if (!addrs.contains(this.namesrvAddrChoosed.get())) {
+                    this.namesrvAddrChoosed.set(null);
+                }
             }
         }
     }
@@ -368,7 +385,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 doBeforeRpcHooks(addr, request);
                 long costTime = System.currentTimeMillis() - beginStartTime;
                 if (timeoutMillis < costTime) {
-                    throw new RemotingTimeoutException("invokeSync call timeout");
+                    throw new RemotingTimeoutException("invokeSync call the addr[" + addr + "] timeout");
                 }
                 RemotingCommand response = this.invokeSyncImpl(channel, request, timeoutMillis - costTime);
                 doAfterRpcHooks(RemotingHelper.parseChannelRemoteAddr(channel), request, response);
@@ -414,7 +431,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         }
 
         final List<String> addrList = this.namesrvAddrList.get();
-        if (this.lockNamesrvChannel.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
+        if (this.namesrvChannelLock.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
             try {
                 addr = this.namesrvAddrChoosed.get();
                 if (addr != null) {
@@ -441,7 +458,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                     throw new RemotingConnectException(addrList.toString());
                 }
             } finally {
-                this.lockNamesrvChannel.unlock();
+                this.namesrvChannelLock.unlock();
             }
         } else {
             log.warn("getAndCreateNameserverChannel: try to lock name server, but timeout, {}ms", LOCK_TIMEOUT_MILLIS);
@@ -518,7 +535,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                 doBeforeRpcHooks(addr, request);
                 long costTime = System.currentTimeMillis() - beginStartTime;
                 if (timeoutMillis < costTime) {
-                    throw new RemotingTooMuchRequestException("invokeAsync call timeout");
+                    throw new RemotingTooMuchRequestException("invokeAsync call the addr[" + addr + "] timeout");
                 }
                 this.invokeAsyncImpl(channel, request, timeoutMillis - costTime, invokeCallback);
             } catch (RemotingSendRequestException e) {

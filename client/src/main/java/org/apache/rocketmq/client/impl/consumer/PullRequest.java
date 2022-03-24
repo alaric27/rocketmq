@@ -45,14 +45,14 @@ public class PullRequest {
     /**
      * 是否被锁定
      */
-    private boolean lockedFirst = false;
+    private boolean previouslyLocked = false;
 
-    public boolean isLockedFirst() {
-        return lockedFirst;
+    public boolean isPreviouslyLocked() {
+        return previouslyLocked;
     }
 
-    public void setLockedFirst(boolean lockedFirst) {
-        this.lockedFirst = lockedFirst;
+    public void setPreviouslyLocked(boolean previouslyLocked) {
+        this.previouslyLocked = previouslyLocked;
     }
 
     public String getConsumerGroup() {

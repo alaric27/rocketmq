@@ -37,7 +37,19 @@ public class Consumer {
         consumer.setNamesrvAddr("101.200.50.131:9876");
         consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_TIMESTAMP);
 
-        consumer.subscribe("Zyn2Topic", "*");
+        /*
+         * Specify where to start in case the specific consumer group is a brand-new one.
+         */
+        consumer.setConsumeFromWhere(ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET);
+
+        /*
+         * Subscribe one more topic to consume.
+         */
+        consumer.subscribe("TopicTest", "*");
+
+        /*
+         *  Register callback to execute on arrival of messages fetched from brokers.
+         */
         consumer.registerMessageListener(new MessageListenerConcurrently() {
 
             @Override

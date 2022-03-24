@@ -22,12 +22,14 @@ import java.util.List;
 
 import org.apache.log4j.Logger;
 import org.apache.rocketmq.broker.BrokerController;
+import org.apache.rocketmq.client.producer.TransactionListener;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.namesrv.NamesrvController;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.test.client.rmq.RMQAsyncSendProducer;
 import org.apache.rocketmq.test.client.rmq.RMQNormalConsumer;
 import org.apache.rocketmq.test.client.rmq.RMQNormalProducer;
+import org.apache.rocketmq.test.client.rmq.RMQTransactionalProducer;
 import org.apache.rocketmq.test.clientinterface.AbstractMQConsumer;
 import org.apache.rocketmq.test.clientinterface.AbstractMQProducer;
 import org.apache.rocketmq.test.factory.ConsumerFactory;
@@ -68,9 +70,12 @@ public class BaseConf {
 
     public static String initTopic() {
         String topic = MQRandomUtils.getRandomTopic();
-        IntegrationTestBase.initTopic(topic, nsAddr, clusterName);
+        return initTopicWithName(topic);
+    }
 
-        return topic;
+    public static String initTopicWithName(String topicName) {
+        IntegrationTestBase.initTopic(topicName, nsAddr, clusterName);
+        return topicName;
     }
 
     public static String initConsumerGroup() {
@@ -89,6 +94,15 @@ public class BaseConf {
 
     public static RMQNormalProducer getProducer(String nsAddr, String topic, boolean useTLS) {
         RMQNormalProducer producer = new RMQNormalProducer(nsAddr, topic, useTLS);
+        if (debug) {
+            producer.setDebug();
+        }
+        mqClients.add(producer);
+        return producer;
+    }
+
+    public static RMQTransactionalProducer getTransactionalProducer(String nsAddr, String topic, TransactionListener transactionListener) {
+        RMQTransactionalProducer producer = new RMQTransactionalProducer(nsAddr, topic, false, transactionListener);
         if (debug) {
             producer.setDebug();
         }

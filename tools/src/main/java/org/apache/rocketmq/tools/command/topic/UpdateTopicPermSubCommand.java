@@ -83,7 +83,7 @@ public class UpdateTopicPermSubCommand implements SubCommand {
             if (commandLine.hasOption('t')) {
                 topic = commandLine.getOptionValue('t').trim();
             } else {
-                System.out.printf("topic paramter value must be need.%n");
+                System.out.printf("topic parameter value must be need.%n");
                 return;
             }
             TopicRouteData topicRouteData = defaultMQAdminExt.examineTopicRouteInfo(topic);
@@ -94,13 +94,13 @@ public class UpdateTopicPermSubCommand implements SubCommand {
             topicConfig.setTopicName(topic);
             topicConfig.setWriteQueueNums(queueData.getWriteQueueNums());
             topicConfig.setReadQueueNums(queueData.getReadQueueNums());
-            topicConfig.setTopicSysFlag(queueData.getTopicSynFlag());
+            topicConfig.setTopicSysFlag(queueData.getTopicSysFlag());
             //new perm
             int perm;
             if (commandLine.hasOption('p')) {
                 perm = Integer.parseInt(commandLine.getOptionValue('p').trim());
             } else {
-                System.out.printf("perm paramter value must be need.%n");
+                System.out.printf("perm parameter value must be need.%n");
                 return;
             }
             topicConfig.setPerm(perm);

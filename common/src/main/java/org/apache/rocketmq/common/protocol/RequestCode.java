@@ -89,7 +89,7 @@ public class RequestCode {
     public static final int REGISTER_BROKER = 103;
 
     public static final int UNREGISTER_BROKER = 104;
-    public static final int GET_ROUTEINTO_BY_TOPIC = 105;
+    public static final int GET_ROUTEINFO_BY_TOPIC = 105;
 
     public static final int GET_BROKER_CLUSTER_INFO = 106;
     public static final int UPDATE_AND_CREATE_SUBSCRIPTIONGROUP = 200;
@@ -188,4 +188,6 @@ public class RequestCode {
     public static final int SEND_REPLY_MESSAGE_V2 = 325;
 
     public static final int PUSH_REPLY_MESSAGE_TO_CLIENT = 326;
+
+    public static final int ADD_WRITE_PERM_OF_BROKER = 327;
 }

@@ -1,21 +1,27 @@
-## Apache RocketMQ [![Build Status](https://travis-ci.org/apache/rocketmq.svg?branch=master)](https://travis-ci.org/apache/rocketmq) [![Coverage Status](https://coveralls.io/repos/github/apache/rocketmq/badge.svg?branch=master)](https://coveralls.io/github/apache/rocketmq?branch=master)
+## Apache RocketMQ 
+[![Build Status](https://travis-ci.org/apache/rocketmq.svg?branch=master)](https://travis-ci.org/apache/rocketmq) [![Coverage Status](https://coveralls.io/repos/github/apache/rocketmq/badge.svg?branch=master)](https://coveralls.io/github/apache/rocketmq?branch=master)
+[![CodeCov](https://codecov.io/gh/apache/rocketmq/branch/master/graph/badge.svg)](https://codecov.io/gh/apache/rocketmq)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.apache.rocketmq/rocketmq-all/badge.svg)](http://search.maven.org/#search%7Cga%7C1%7Corg.apache.rocketmq)
 [![GitHub release](https://img.shields.io/badge/release-download-orange.svg)](https://rocketmq.apache.org/dowloading/releases)
 [![License](https://img.shields.io/badge/license-Apache%202-4EB1BA.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Average time to resolve an issue](http://isitmaintained.com/badge/resolution/apache/rocketmq.svg)](http://isitmaintained.com/project/apache/rocketmq "Average time to resolve an issue")
+[![Percentage of issues still open](http://isitmaintained.com/badge/open/apache/rocketmq.svg)](http://isitmaintained.com/project/apache/rocketmq "Percentage of issues still open")
+[![Twitter Follow](https://img.shields.io/twitter/follow/ApacheRocketMQ?style=social)](https://twitter.com/intent/follow?screen_name=ApacheRocketMQ)
 
 **[Apache RocketMQ](https://rocketmq.apache.org) is a distributed messaging and streaming platform with low latency, high performance and reliability, trillion-level capacity and flexible scalability.**
 
 It offers a variety of features:
 
-* Pub/Sub messaging model
+* Messaging patterns including publish/subscribe, request/reply and streaming
 * Financial grade transactional message
-* A variety of cross language clients, such as Java, C/C++, Python, Go
+* Built-in fault tolerance and high availability configuration options base on [DLedger](https://github.com/openmessaging/openmessaging-storage-dledger)
+* A variety of cross language clients, such as Java, [C/C++](https://github.com/apache/rocketmq-client-cpp), [Python](https://github.com/apache/rocketmq-client-python), [Go](https://github.com/apache/rocketmq-client-go), [Node.js](https://github.com/apache/rocketmq-client-nodejs)
 * Pluggable transport protocols, such as TCP, SSL, AIO
-* Inbuilt message tracing capability, also support opentracing
-* Versatile big-data and streaming ecosytem integration
+* Built-in message tracing capability, also support opentracing
+* Versatile big-data and streaming ecosystem integration
 * Message retroactivity by time or offset
 * Reliable FIFO and strict ordered messaging in the same queue
-* Efficient pull&push consumption model
+* Efficient pull and push consumption model
 * Million-level message accumulation capacity in a single queue
 * Multiple messaging protocols like JMS and OpenMessaging
 * Flexible distributed scale-out deployment architecture
@@ -23,10 +29,25 @@ It offers a variety of features:
 * Various message filter mechanics such as SQL and Tag
 * Docker images for isolated testing and cloud isolated clusters
 * Feature-rich administrative dashboard for configuration, metrics and monitoring
-* Authentication and authorisation
-
+* Authentication and authorization
+* Free open source connectors, for both sources and sinks
+* Lightweight real-time computing
 ----------
 
+## Apache RocketMQ Community
+* [RocketMQ Streams](https://github.com/apache/rocketmq-streams)
+* [RocketMQ Flink](https://github.com/apache/rocketmq-flink)
+* [RocketMQ Client CPP](https://github.com/apache/rocketmq-client-cpp)
+* [RocketMQ Client Go](https://github.com/apache/rocketmq-client-go)
+* [RocketMQ Client Python](https://github.com/apache/rocketmq-client-python)
+* [RocketMQ Client Nodejs](https://github.com/apache/rocketmq-client-nodejs)
+* [RocketMQ Spring](https://github.com/apache/rocketmq-spring)
+* [RocketMQ Exporter](https://github.com/apache/rocketmq-exporter)
+* [RocketMQ Operator](https://github.com/apache/rocketmq-operator)
+* [RocketMQ Docker](https://github.com/apache/rocketmq-docker)
+* [RocketMQ Incubating Community Projects](https://github.com/apache/rocketmq-externals)
+
+----------
 ## Learn it & Contact us
 * Mailing Lists: <https://rocketmq.apache.org/about/contact/>
 * Home: <https://rocketmq.apache.org>
@@ -39,9 +60,7 @@ It offers a variety of features:
 
 ----------
 
-## Apache RocketMQ Community
-* [RocketMQ Community Projects](https://github.com/apache/rocketmq-externals)
-----------
+
 
 ## Contributing
 We always welcome new contributions, whether for trivial cleanups, [big new features](https://github.com/apache/rocketmq/wiki/RocketMQ-Improvement-Proposal) or other material rewards, more details see [here](http://rocketmq.apache.org/docs/how-to-contribute/).

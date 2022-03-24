@@ -84,12 +84,9 @@ public class TopicPublishInfo {
         if (lastBrokerName == null) {
             return selectOneMessageQueue();
         } else {
-            /**
-             * 如果lastBrokerName不为空，则排除所有lastBrokerName的队列
-             */
-            int index = this.sendWhichQueue.getAndIncrement();
             for (int i = 0; i < this.messageQueueList.size(); i++) {
-                int pos = Math.abs(index++) % this.messageQueueList.size();
+                int index = this.sendWhichQueue.incrementAndGet();
+                int pos = Math.abs(index) % this.messageQueueList.size();
                 if (pos < 0)
                     pos = 0;
                 MessageQueue mq = this.messageQueueList.get(pos);
@@ -106,7 +103,7 @@ public class TopicPublishInfo {
      * @return
      */
     public MessageQueue selectOneMessageQueue() {
-        int index = this.sendWhichQueue.getAndIncrement();
+        int index = this.sendWhichQueue.incrementAndGet();
         int pos = Math.abs(index) % this.messageQueueList.size();
         if (pos < 0)
             pos = 0;

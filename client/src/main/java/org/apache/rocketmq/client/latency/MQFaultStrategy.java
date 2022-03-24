@@ -65,19 +65,15 @@ public class MQFaultStrategy {
         // 如果采用故障延迟机制
         if (this.sendLatencyFaultEnable) {
             try {
-                int index = tpInfo.getSendWhichQueue().getAndIncrement();
+                int index = tpInfo.getSendWhichQueue().incrementAndGet();
                 for (int i = 0; i < tpInfo.getMessageQueueList().size(); i++) {
                     int pos = Math.abs(index++) % tpInfo.getMessageQueueList().size();
                     if (pos < 0)
                         pos = 0;
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
-
                     // 验证该消息队列是否可用
-                    if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
-                        // 不需要这个判断逻辑，如果当前broker是可用的则应该直接返回
-                        if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
-                            return mq;
-                    }
+                    if (latencyFaultTolerance.isAvailable(mq.getBrokerName()))
+                        return mq;
                 }
 
 
@@ -87,7 +83,7 @@ public class MQFaultStrategy {
                     final MessageQueue mq = tpInfo.selectOneMessageQueue();
                     if (notBestBroker != null) {
                         mq.setBrokerName(notBestBroker);
-                        mq.setQueueId(tpInfo.getSendWhichQueue().getAndIncrement() % writeQueueNums);
+                        mq.setQueueId(tpInfo.getSendWhichQueue().incrementAndGet() % writeQueueNums);
                     }
                     return mq;
                 } else {

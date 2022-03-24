@@ -61,10 +61,9 @@ public class NettyServerConfig implements Cloneable {
      * 网络socket 接收缓冲区大小
      */
     private int serverSocketRcvBufSize = NettySystemConfig.socketRcvbufSize;
-
-    /**
-     * ByteBuffer 是否开启缓存
-     */
+    private int writeBufferHighWaterMark = NettySystemConfig.writeBufferHighWaterMark;
+    private int writeBufferLowWaterMark = NettySystemConfig.writeBufferLowWaterMark;
+    private int serverSocketBacklog = NettySystemConfig.socketBacklog;
     private boolean serverPooledByteBufAllocatorEnable = true;
     /**
      * 是否启用Epoll IO 模型
@@ -143,6 +142,14 @@ public class NettyServerConfig implements Cloneable {
         this.serverSocketRcvBufSize = serverSocketRcvBufSize;
     }
 
+    public int getServerSocketBacklog() {
+        return serverSocketBacklog;
+    }
+
+    public void setServerSocketBacklog(int serverSocketBacklog) {
+        this.serverSocketBacklog = serverSocketBacklog;
+    }
+
     public boolean isServerPooledByteBufAllocatorEnable() {
         return serverPooledByteBufAllocatorEnable;
     }
@@ -162,5 +169,21 @@ public class NettyServerConfig implements Cloneable {
     @Override
     public Object clone() throws CloneNotSupportedException {
         return (NettyServerConfig) super.clone();
+    }
+
+    public int getWriteBufferLowWaterMark() {
+        return writeBufferLowWaterMark;
+    }
+
+    public void setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        this.writeBufferLowWaterMark = writeBufferLowWaterMark;
+    }
+
+    public int getWriteBufferHighWaterMark() {
+        return writeBufferHighWaterMark;
+    }
+
+    public void setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        this.writeBufferHighWaterMark = writeBufferHighWaterMark;
     }
 }

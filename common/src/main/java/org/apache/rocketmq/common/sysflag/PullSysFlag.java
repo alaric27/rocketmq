@@ -33,6 +33,7 @@ public class PullSysFlag {
      * 消息过滤机制为类过滤模式
      */
     private final static int FLAG_CLASS_FILTER = 0x1 << 3;
+    private final static int FLAG_LITE_PULL_MESSAGE = 0x1 << 4;
 
     public static int buildSysFlag(final boolean commitOffset, final boolean suspend,
         final boolean subscription, final boolean classFilter) {
@@ -57,6 +58,17 @@ public class PullSysFlag {
         return flag;
     }
 
+    public static int buildSysFlag(final boolean commitOffset, final boolean suspend,
+        final boolean subscription, final boolean classFilter, final boolean litePull) {
+        int flag = buildSysFlag(commitOffset, suspend, subscription, classFilter);
+
+        if (litePull) {
+            flag |= FLAG_LITE_PULL_MESSAGE;
+        }
+
+        return flag;
+    }
+
     public static int clearCommitOffsetFlag(final int sysFlag) {
         return sysFlag & (~FLAG_COMMIT_OFFSET);
     }
@@ -75,5 +87,9 @@ public class PullSysFlag {
 
     public static boolean hasClassFilterFlag(final int sysFlag) {
         return (sysFlag & FLAG_CLASS_FILTER) == FLAG_CLASS_FILTER;
+    }
+
+    public static boolean hasLitePullFlag(final int sysFlag) {
+        return (sysFlag & FLAG_LITE_PULL_MESSAGE) == FLAG_LITE_PULL_MESSAGE;
     }
 }

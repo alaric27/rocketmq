@@ -25,7 +25,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -39,6 +38,8 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.store.CommitLog;
 import org.apache.rocketmq.store.DefaultMessageStore;
+import org.apache.rocketmq.store.PutMessageSpinLock;
+import org.apache.rocketmq.store.PutMessageStatus;
 
 /**
  * RocketMQ HA 的实现原理如下：
@@ -290,16 +291,18 @@ public class HAService {
     class GroupTransferService extends ServiceThread {
 
         private final WaitNotifyObject notifyTransferObject = new WaitNotifyObject();
-        private volatile List<CommitLog.GroupCommitRequest> requestsWrite = new ArrayList<>();
-        private volatile List<CommitLog.GroupCommitRequest> requestsRead = new ArrayList<>();
+        private final PutMessageSpinLock lock = new PutMessageSpinLock();
+        private volatile LinkedList<CommitLog.GroupCommitRequest> requestsWrite = new LinkedList<>();
+        private volatile LinkedList<CommitLog.GroupCommitRequest> requestsRead = new LinkedList<>();
 
-        public synchronized void putRequest(final CommitLog.GroupCommitRequest request) {
-            synchronized (this.requestsWrite) {
+        public void putRequest(final CommitLog.GroupCommitRequest request) {
+            lock.lock();
+            try {
                 this.requestsWrite.add(request);
+            } finally {
+                lock.unlock();
             }
-            if (hasNotified.compareAndSet(false, true)) {
-                waitPoint.countDown(); // notify
-            }
+            this.wakeup();
         }
 
         public void notifyTransferSome() {
@@ -307,32 +310,30 @@ public class HAService {
         }
 
         private void swapRequests() {
-            List<CommitLog.GroupCommitRequest> tmp = this.requestsWrite;
-            this.requestsWrite = this.requestsRead;
-            this.requestsRead = tmp;
+            lock.lock();
+            try {
+                LinkedList<CommitLog.GroupCommitRequest> tmp = this.requestsWrite;
+                this.requestsWrite = this.requestsRead;
+                this.requestsRead = tmp;
+            } finally {
+                lock.unlock();
+            }
         }
 
         private void doWaitTransfer() {
-            synchronized (this.requestsRead) {
-                if (!this.requestsRead.isEmpty()) {
-                    for (CommitLog.GroupCommitRequest req : this.requestsRead) {
-                        boolean transferOK = HAService.this.push2SlaveMaxOffset.get() >= req.getNextOffset();
-                        long waitUntilWhen = HAService.this.defaultMessageStore.getSystemClock().now()
-                            + HAService.this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout();
-                        while (!transferOK && HAService.this.defaultMessageStore.getSystemClock().now() < waitUntilWhen) {
-                            this.notifyTransferObject.waitForRunning(1000);
-                            transferOK = HAService.this.push2SlaveMaxOffset.get() >= req.getNextOffset();
-                        }
-
-                        if (!transferOK) {
-                            log.warn("transfer messsage to slave timeout, " + req.getNextOffset());
-                        }
-
-                        req.wakeupCustomer(transferOK);
+            if (!this.requestsRead.isEmpty()) {
+                for (CommitLog.GroupCommitRequest req : this.requestsRead) {
+                    boolean transferOK = HAService.this.push2SlaveMaxOffset.get() >= req.getNextOffset();
+                    long deadLine = req.getDeadLine();
+                    while (!transferOK && deadLine - System.nanoTime() > 0) {
+                        this.notifyTransferObject.waitForRunning(1000);
+                        transferOK = HAService.this.push2SlaveMaxOffset.get() >= req.getNextOffset();
                     }
 
-                    this.requestsRead.clear();
+                    req.wakeupCustomer(transferOK ? PutMessageStatus.PUT_OK : PutMessageStatus.FLUSH_SLAVE_TIMEOUT);
                 }
+
+                this.requestsRead = new LinkedList<>();
             }
         }
 
@@ -503,7 +504,6 @@ public class HAService {
         // 处理从master同步的commitLog数据
         private boolean dispatchReadRequest() {
             final int msgHeaderSize = 8 + 4; // phyoffset + size
-            int readSocketPos = this.byteBufferRead.position();
 
             while (true) {
                 int diff = this.byteBufferRead.position() - this.dispatchPosition;
@@ -522,14 +522,13 @@ public class HAService {
                     }
 
                     if (diff >= (msgHeaderSize + bodySize)) {
-                        byte[] bodyData = new byte[bodySize];
-                        this.byteBufferRead.position(this.dispatchPosition + msgHeaderSize);
-                        this.byteBufferRead.get(bodyData);
+                        byte[] bodyData = byteBufferRead.array();
+                        int dataStart = this.dispatchPosition + msgHeaderSize;
 
                         // 追加commitLog文件
-                        HAService.this.defaultMessageStore.appendToCommitLog(masterPhyOffset, bodyData);
+                        HAService.this.defaultMessageStore.appendToCommitLog(
+                                masterPhyOffset, bodyData, dataStart, bodySize);
 
-                        this.byteBufferRead.position(readSocketPos);
                         this.dispatchPosition += msgHeaderSize + bodySize;
 
                         if (!reportSlaveMaxOffsetPlus()) {
@@ -671,6 +670,13 @@ public class HAService {
 
             log.info(this.getServiceName() + " service end");
         }
+
+        @Override
+        public void shutdown() {
+            super.shutdown();
+            closeMaster();
+        }
+
         // private void disableWriteFlag() {
         // if (this.socketChannel != null) {
         // SelectionKey sk = this.socketChannel.keyFor(this.selector);

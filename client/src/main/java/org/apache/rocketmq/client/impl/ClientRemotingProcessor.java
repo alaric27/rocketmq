@@ -25,7 +25,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.client.impl.producer.MQProducerInner;
 import org.apache.rocketmq.client.log.ClientLogger;
-import org.apache.rocketmq.client.producer.RequestFutureTable;
+import org.apache.rocketmq.client.producer.RequestFutureHolder;
 import org.apache.rocketmq.client.producer.RequestResponseFuture;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.message.MessageAccessor;
@@ -52,10 +52,11 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.common.RemotingHelper;
 import org.apache.rocketmq.remoting.common.RemotingUtil;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
+import org.apache.rocketmq.remoting.netty.AsyncNettyRequestProcessor;
 import org.apache.rocketmq.remoting.netty.NettyRequestProcessor;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
-public class ClientRemotingProcessor implements NettyRequestProcessor {
+public class ClientRemotingProcessor extends AsyncNettyRequestProcessor implements NettyRequestProcessor {
     private final InternalLogger log = ClientLogger.getLog();
     private final MQClientInstance mqClientFactory;
 
@@ -274,16 +275,14 @@ public class ClientRemotingProcessor implements NettyRequestProcessor {
 
     private void processReplyMessage(MessageExt replyMsg) {
         final String correlationId = replyMsg.getUserProperty(MessageConst.PROPERTY_CORRELATION_ID);
-        final RequestResponseFuture requestResponseFuture = RequestFutureTable.getRequestFutureTable().get(correlationId);
+        final RequestResponseFuture requestResponseFuture = RequestFutureHolder.getInstance().getRequestFutureTable().get(correlationId);
         if (requestResponseFuture != null) {
             requestResponseFuture.putResponseMessage(replyMsg);
 
-            RequestFutureTable.getRequestFutureTable().remove(correlationId);
+            RequestFutureHolder.getInstance().getRequestFutureTable().remove(correlationId);
 
             if (requestResponseFuture.getRequestCallback() != null) {
                 requestResponseFuture.getRequestCallback().onSuccess(replyMsg);
-            } else {
-                requestResponseFuture.putResponseMessage(replyMsg);
             }
         } else {
             String bornHost = replyMsg.getBornHostString();
