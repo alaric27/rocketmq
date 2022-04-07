@@ -83,6 +83,8 @@ public abstract class NettyRemotingAbstract {
         new HashMap<Integer, Pair<NettyRequestProcessor, ExecutorService>>(64);
 
     /**
+     * 本质是一个线程，将netty事件传递给用户定义的 ChannelEventListener
+     * 用途: 在netty channel 关闭的时候，清理broker信息
      * Executor to feed netty events to user defined {@link ChannelEventListener}.
      */
     protected final NettyEventExecutor nettyEventExecutor = new NettyEventExecutor();

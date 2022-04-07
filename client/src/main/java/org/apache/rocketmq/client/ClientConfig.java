@@ -97,6 +97,8 @@ public class ClientConfig {
 
     public void changeInstanceNameToPID() {
         if (this.instanceName.equals("DEFAULT")) {
+            // 加入纳秒时间是为了解决多个实例名称相同的问题
+            // 之前docker部署的是曾经遇见过该情况，因为docker中实例pid都为1，所以多个消费者实例名称相同
             this.instanceName = UtilAll.getPid() + "#" + System.nanoTime();
         }
     }

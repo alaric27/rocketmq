@@ -248,11 +248,15 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
         //if client open the message trace feature
         if (enableMsgTrace) {
             try {
+                // 消息轨迹分发器
                 AsyncTraceDispatcher dispatcher = new AsyncTraceDispatcher(producerGroup, TraceDispatcher.Type.PRODUCE, customizedTraceTopic, rpcHook);
                 dispatcher.setHostProducer(this.defaultMQProducerImpl);
                 traceDispatcher = dispatcher;
+
+                // 注册发送消息的钩子
                 this.defaultMQProducerImpl.registerSendMessageHook(
                     new SendMessageTraceHookImpl(traceDispatcher));
+                // 注册事务完成的钩子
                 this.defaultMQProducerImpl.registerEndTransactionHook(
                     new EndTransactionTraceHookImpl(traceDispatcher));
             } catch (Throwable e) {

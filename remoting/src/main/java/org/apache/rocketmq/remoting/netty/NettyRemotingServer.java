@@ -67,11 +67,23 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 public class NettyRemotingServer extends NettyRemotingAbstract implements RemotingServer {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(RemotingHelper.ROCKETMQ_REMOTING);
     private final ServerBootstrap serverBootstrap;
+
+    /**
+     * work group
+     */
     private final EventLoopGroup eventLoopGroupSelector;
+
+    /**
+     * boss group
+     */
     private final EventLoopGroup eventLoopGroupBoss;
     private final NettyServerConfig nettyServerConfig;
 
     private final ExecutorService publicExecutor;
+
+    /**
+     * 自定义netty 事件监听器
+     */
     private final ChannelEventListener channelEventListener;
 
     private final Timer timer = new Timer("ServerHouseKeepingService", true);
@@ -245,10 +257,12 @@ public class NettyRemotingServer extends NettyRemotingAbstract implements Remoti
             throw new RuntimeException("this.serverBootstrap.bind().sync() InterruptedException", e1);
         }
 
+        // 启动 自定义事件监听线程
         if (this.channelEventListener != null) {
             this.nettyEventExecutor.start();
         }
 
+        // 定时扫描超时请求
         this.timer.scheduleAtFixedRate(new TimerTask() {
 
             @Override

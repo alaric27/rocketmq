@@ -80,6 +80,7 @@ private static final int SCHEDULE_TOPIC_QUEUE_NUM = 18;
             this.topicConfigTable.put(topicConfig.getTopicName(), topicConfig);
         }
         {
+            // 如果当前broker能够自动创建topic，则需要在broker启动时，自动创建一个系统topic TBW102
             if (this.brokerController.getBrokerConfig().isAutoCreateTopicEnable()) {
                 String topic = TopicValidator.AUTO_CREATE_TOPIC_KEY_TOPIC;
                 TopicConfig topicConfig = new TopicConfig(topic);
