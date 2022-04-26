@@ -88,12 +88,12 @@ public class MappedFile extends ReferenceResource {
     protected FileChannel fileChannel;
 
     /**
-     * 堆内存Buffer
+     * 堆内存Buffer, 暂存池
      */
     protected ByteBuffer writeBuffer = null;
 
     /**
-     * 堆内存池
+     * 暂存池
      */
     protected TransientStorePool transientStorePool = null;
 

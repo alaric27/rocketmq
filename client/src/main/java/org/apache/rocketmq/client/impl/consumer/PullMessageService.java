@@ -65,6 +65,9 @@ public class PullMessageService extends ServiceThread {
     }
 
     /**
+     * 主要有两个地方调用
+     * 一个是拉取消息成功后，又将PullRequest放入队列进行另一次拉取
+     * 一个是RebalanceImpl中创建
      * 放入拉取任务
      * @param pullRequest
      */

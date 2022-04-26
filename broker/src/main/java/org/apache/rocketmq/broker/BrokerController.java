@@ -172,6 +172,10 @@ public class BrokerController {
     private MessageStore messageStore;
     private RemotingServer remotingServer;
     private RemotingServer fastRemotingServer;
+
+    /**
+     * topic 管理类，对应store文件
+     */
     private TopicConfigManager topicConfigManager;
     private ExecutorService sendMessageExecutor;
     private ExecutorService putMessageFutureExecutor;
@@ -528,6 +532,7 @@ public class BrokerController {
             initialTransaction();
             // 初始化Acl
             initialAcl();
+            // 初始化RPC Hook
             initialRpcHooks();
         }
         return result;
