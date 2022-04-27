@@ -110,6 +110,10 @@ public class MessageStoreConfig {
     private int maxTransferBytesOnMessageInDisk = 1024 * 64;
     @ImportantField
     private int maxTransferCountOnMessageInDisk = 8;
+
+    /**
+     * 表示RocketMQ 所能使用的最大内存比例，超过该内存，消息将被置换出内存。
+     */
     @ImportantField
     private int accessMessageInMemoryMaxRatio = 40;
     @ImportantField

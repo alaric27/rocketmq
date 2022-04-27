@@ -120,6 +120,11 @@ public class PullAPIWrapper {
         return pullResult;
     }
 
+    /**
+     * 更新当前队列应该从哪个broker拉取消息
+     * @param mq
+     * @param brokerId
+     */
     public void updatePullFromWhichNode(final MessageQueue mq, final long brokerId) {
         AtomicLong suggest = this.pullFromWhichNodeTable.get(mq);
         if (null == suggest) {

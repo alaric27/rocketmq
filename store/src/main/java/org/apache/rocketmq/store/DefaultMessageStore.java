@@ -639,6 +639,7 @@ public class DefaultMessageStore implements MessageStore {
         // lazy init when find msg.
         GetMessageResult getResult = null;
 
+        // commitLog文件最大偏移量
         final long maxOffsetPy = this.commitLog.getMaxOffset();
 
         // 根据主题和队列编号获取消费队列
@@ -675,6 +676,7 @@ public class DefaultMessageStore implements MessageStore {
                         status = GetMessageStatus.NO_MATCHED_MESSAGE;
 
                         long nextPhyFileStartOffset = Long.MIN_VALUE;
+                        // 此次拉取消息的最大偏移量
                         long maxPhyOffsetPulling = 0;
 
                         int i = 0;
@@ -762,6 +764,7 @@ public class DefaultMessageStore implements MessageStore {
                         long diff = maxOffsetPy - maxPhyOffsetPulling;
                         long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE
                             * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));
+                        // 如果diff大于memory，表示当前需要拉取的消息已经超出了常住内存的大小，表示主服务繁忙，建议从从服务拉取
                         getResult.setSuggestPullingFromSlave(diff > memory);
                     } finally {
 

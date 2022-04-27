@@ -284,6 +284,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
             if (this.brokerController.getBrokerConfig().isSlaveReadEnable()) {
                 // consume too slow ,redirect to another machine
+                // 如果当前节点压力过大，则重定向到另一台机器
                 if (getMessageResult.isSuggestPullingFromSlave()) {
                     responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getWhichBrokerWhenConsumeSlowly());
                 }
@@ -292,6 +293,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
                     responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getBrokerId());
                 }
             } else {
+                // 如果slaveReadEnable=false,则只能在主节点拉取消息
                 responseHeader.setSuggestWhichBrokerId(MixAll.MASTER_ID);
             }
 
