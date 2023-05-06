@@ -20,7 +20,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Trace transfering bean
+ * Trace transferring bean
  * 消息追踪传输的bean
  */
 public class TraceTransferBean {
@@ -32,7 +32,7 @@ public class TraceTransferBean {
     /**
      * 消息id,消息keys
      */
-    private Set<String> transKey = new HashSet<String>();
+    private Set<String> transKey = new HashSet<>();
 
     public String getTransData() {
         return transData;

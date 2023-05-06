@@ -17,21 +17,27 @@
 package org.apache.rocketmq.example.benchmark;
 
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.LongAdder;
 import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
-import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;
+import org.apache.rocketmq.client.producer.SendCallback;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.message.Message;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
+import org.apache.rocketmq.remoting.protocol.RemotingCommand;
+import org.apache.rocketmq.remoting.protocol.SerializeType;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.srvutil.ServerUtil;
 
 import java.util.Arrays;
@@ -47,18 +53,22 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class Producer {
 
+    private static final Logger log = LoggerFactory.getLogger(Producer.class);
+
     private static byte[] msgBody;
+    private static final int MAX_LENGTH_ASYNC_QUEUE = 10000;
+    private static final int SLEEP_FOR_A_WHILE = 100;
 
     public static void main(String[] args) throws MQClientException {
+        System.setProperty(RemotingCommand.SERIALIZE_TYPE_PROPERTY, SerializeType.ROCKETMQ.name());
 
         Options options = ServerUtil.buildCommandlineOptions(new Options());
-        CommandLine commandLine = ServerUtil.parseCmdLine("benchmarkProducer", args, buildCommandlineOptions(options), new PosixParser());
+        CommandLine commandLine = ServerUtil.parseCmdLine("benchmarkProducer", args, buildCommandlineOptions(options), new DefaultParser());
         if (null == commandLine) {
             System.exit(-1);
         }
 
         final String topic = commandLine.hasOption('t') ? commandLine.getOptionValue('t').trim() : "BenchmarkTest";
-        final int threadCount = commandLine.hasOption('w') ? Integer.parseInt(commandLine.getOptionValue('w')) : 64;
         final int messageSize = commandLine.hasOption('s') ? Integer.parseInt(commandLine.getOptionValue('s')) : 128;
         final boolean keyEnable = commandLine.hasOption('k') && Boolean.parseBoolean(commandLine.getOptionValue('k'));
         final int propertySize = commandLine.hasOption('p') ? Integer.parseInt(commandLine.getOptionValue('p')) : 0;
@@ -68,17 +78,20 @@ public class Producer {
         final long messageNum = commandLine.hasOption('q') ? Long.parseLong(commandLine.getOptionValue('q')) : 0;
         final boolean delayEnable = commandLine.hasOption('d') && Boolean.parseBoolean(commandLine.getOptionValue('d'));
         final int delayLevel = commandLine.hasOption('e') ? Integer.parseInt(commandLine.getOptionValue('e')) : 1;
+        final boolean asyncEnable = commandLine.hasOption('y') && Boolean.parseBoolean(commandLine.getOptionValue('y'));
+        final int threadCount = asyncEnable ? 1 : commandLine.hasOption('w') ? Integer.parseInt(commandLine.getOptionValue('w')) : 64;
 
-        System.out.printf("topic: %s threadCount: %d messageSize: %d keyEnable: %s propertySize: %d tagCount: %d traceEnable: %s aclEnable: %s messageQuantity: %d%n delayEnable: %s%n delayLevel: %s%n",
-            topic, threadCount, messageSize, keyEnable, propertySize, tagCount, msgTraceEnable, aclEnable, messageNum, delayEnable, delayLevel);
+        System.out.printf("topic: %s, threadCount: %d, messageSize: %d, keyEnable: %s, propertySize: %d, tagCount: %d, " +
+                "traceEnable: %s, aclEnable: %s, messageQuantity: %d, delayEnable: %s, delayLevel: %s, " +
+                "asyncEnable: %s%n",
+            topic, threadCount, messageSize, keyEnable, propertySize, tagCount, msgTraceEnable, aclEnable, messageNum,
+            delayEnable, delayLevel, asyncEnable);
 
         StringBuilder sb = new StringBuilder(messageSize);
         for (int i = 0; i < messageSize; i++) {
             sb.append(RandomStringUtils.randomAlphanumeric(1));
         }
         msgBody = sb.toString().getBytes(StandardCharsets.UTF_8);
-
-        final InternalLogger log = ClientLogger.getLog();
 
         final ExecutorService sendThreadPool = Executors.newFixedThreadPool(threadCount);
 
@@ -87,7 +100,7 @@ public class Producer {
         ScheduledExecutorService executorService = new ScheduledThreadPoolExecutor(1,
                 new BasicThreadFactory.Builder().namingPattern("BenchmarkTimerThread-%d").daemon(true).build());
 
-        final LinkedList<Long[]> snapshotList = new LinkedList<Long[]>();
+        final LinkedList<Long[]> snapshotList = new LinkedList<>();
 
         final long[] msgNums = new long[threadCount];
 
@@ -186,18 +199,26 @@ public class Producer {
                                     startValue += 2;
                                 }
                             }
-                            producer.send(msg);
-                            statsBenchmark.getSendRequestSuccessCount().increment();
-                            statsBenchmark.getReceiveResponseSuccessCount().increment();
-                            final long currentRT = System.currentTimeMillis() - beginTimestamp;
-                            statsBenchmark.getSendMessageSuccessTimeTotal().add(currentRT);
-                            long prevMaxRT = statsBenchmark.getSendMessageMaxRT().longValue();
-                            while (currentRT > prevMaxRT) {
-                                boolean updated = statsBenchmark.getSendMessageMaxRT().compareAndSet(prevMaxRT, currentRT);
-                                if (updated)
-                                    break;
+                            if (asyncEnable) {
+                                ThreadPoolExecutor e = (ThreadPoolExecutor) producer.getDefaultMQProducerImpl().getAsyncSenderExecutor();
+                                // Flow control
+                                while (e.getQueue().size() > MAX_LENGTH_ASYNC_QUEUE) {
+                                    Thread.sleep(SLEEP_FOR_A_WHILE);
+                                }
+                                producer.send(msg, new SendCallback() {
+                                    @Override
+                                    public void onSuccess(SendResult sendResult) {
+                                        updateStatsSuccess(statsBenchmark, beginTimestamp);
+                                    }
 
-                                prevMaxRT = statsBenchmark.getSendMessageMaxRT().longValue();
+                                    @Override
+                                    public void onException(Throwable e) {
+                                        statsBenchmark.getSendRequestFailedCount().increment();
+                                    }
+                                });
+                            } else {
+                                producer.send(msg);
+                                updateStatsSuccess(statsBenchmark, beginTimestamp);
                             }
                         } catch (RemotingException e) {
                             statsBenchmark.getSendRequestFailedCount().increment();
@@ -253,6 +274,21 @@ public class Producer {
         }
     }
 
+    private static void updateStatsSuccess(StatsBenchmarkProducer statsBenchmark, long beginTimestamp) {
+        statsBenchmark.getSendRequestSuccessCount().increment();
+        statsBenchmark.getReceiveResponseSuccessCount().increment();
+        final long currentRT = System.currentTimeMillis() - beginTimestamp;
+        statsBenchmark.getSendMessageSuccessTimeTotal().add(currentRT);
+        long prevMaxRT = statsBenchmark.getSendMessageMaxRT().longValue();
+        while (currentRT > prevMaxRT) {
+            boolean updated = statsBenchmark.getSendMessageMaxRT().compareAndSet(prevMaxRT, currentRT);
+            if (updated)
+                break;
+
+            prevMaxRT = statsBenchmark.getSendMessageMaxRT().longValue();
+        }
+    }
+
     public static Options buildCommandlineOptions(final Options options) {
         Option opt = new Option("w", "threadCount", true, "Thread count, Default: 64");
         opt.setRequired(false);
@@ -302,6 +338,10 @@ public class Producer {
         opt.setRequired(false);
         options.addOption(opt);
 
+        opt = new Option("y", "asyncEnable", true, "Enable async produce, Default: false");
+        opt.setRequired(false);
+        options.addOption(opt);
+
         return options;
     }
 
@@ -317,12 +357,12 @@ public class Producer {
         final double averageRT = (end[5] - begin[5]) / (double) (end[3] - begin[3]);
 
         if (done) {
-            System.out.printf("[Complete] Send Total: %d Send TPS: %d Max RT(ms): %d Average RT(ms): %7.3f Send Failed: %d Response Failed: %d%n",
+            System.out.printf("[Complete] Send Total: %d | Send TPS: %d | Max RT(ms): %d | Average RT(ms): %7.3f | Send Failed: %d | Response Failed: %d%n",
                 statsBenchmark.getSendRequestSuccessCount().longValue() + statsBenchmark.getSendRequestFailedCount().longValue(),
                 sendTps, statsBenchmark.getSendMessageMaxRT().longValue(), averageRT, end[2], end[4]);
         } else {
-            System.out.printf("Current Time: %s Send TPS: %d Max RT(ms): %d Average RT(ms): %7.3f Send Failed: %d Response Failed: %d%n",
-                System.currentTimeMillis(), sendTps, statsBenchmark.getSendMessageMaxRT().longValue(), averageRT, end[2], end[4]);
+            System.out.printf("Current Time: %s | Send TPS: %d | Max RT(ms): %d | Average RT(ms): %7.3f | Send Failed: %d | Response Failed: %d%n",
+                UtilAll.timeMillisToHumanString2(System.currentTimeMillis()), sendTps, statsBenchmark.getSendMessageMaxRT().longValue(), averageRT, end[2], end[4]);
         }
     }
 }

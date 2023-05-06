@@ -17,11 +17,12 @@
 package org.apache.rocketmq.client.impl.consumer;
 
 import org.apache.rocketmq.common.message.MessageQueue;
+import org.apache.rocketmq.common.message.MessageRequestMode;
 
 /**
  * 消息拉取请求类
  */
-public class PullRequest {
+public class PullRequest implements MessageRequest {
     /**
      * 消费组
      */
@@ -122,5 +123,10 @@ public class PullRequest {
 
     public void setProcessQueue(ProcessQueue processQueue) {
         this.processQueue = processQueue;
+    }
+
+    @Override
+    public MessageRequestMode getMessageRequestMode() {
+        return MessageRequestMode.PULL;
     }
 }

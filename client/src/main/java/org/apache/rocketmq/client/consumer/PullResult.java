@@ -45,6 +45,7 @@ public class PullResult {
      */
     private List<MessageExt> msgFoundList;
 
+
     public PullResult(PullStatus pullStatus, long nextBeginOffset, long minOffset, long maxOffset,
         List<MessageExt> msgFoundList) {
         super();

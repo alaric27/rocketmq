@@ -39,5 +39,5 @@ public interface RPCHook {
      * @param response
      */
     void doAfterResponse(final String remoteAddr, final RemotingCommand request,
-        final RemotingCommand response);
+                         final RemotingCommand response);
 }

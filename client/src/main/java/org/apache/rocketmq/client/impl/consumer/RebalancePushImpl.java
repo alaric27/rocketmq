@@ -26,15 +26,18 @@ import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.common.MixAll;
 import org.apache.rocketmq.common.UtilAll;
+import org.apache.rocketmq.common.constant.ConsumeInitMode;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
-import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
-import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
+import org.apache.rocketmq.remoting.protocol.ResponseCode;
+import org.apache.rocketmq.remoting.protocol.heartbeat.ConsumeType;
+import org.apache.rocketmq.remoting.protocol.heartbeat.MessageModel;
+import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
 public class RebalancePushImpl extends RebalanceImpl {
     private final static long UNLOCK_DELAY_TIME_MILLS = Long.parseLong(System.getProperty("rocketmq.client.unlockDelayTimeMills", "20000"));
     private final DefaultMQPushConsumerImpl defaultMQPushConsumerImpl;
+
 
     public RebalancePushImpl(DefaultMQPushConsumerImpl defaultMQPushConsumerImpl) {
         this(null, null, null, null, defaultMQPushConsumerImpl);
@@ -110,6 +113,16 @@ public class RebalancePushImpl extends RebalanceImpl {
         return true;
     }
 
+    @Override
+    public boolean clientRebalance(String topic) {
+        // POPTODO order pop consume not implement yet
+        return defaultMQPushConsumerImpl.getDefaultMQPushConsumer().isClientRebalance() || defaultMQPushConsumerImpl.isConsumeOrderly() || MessageModel.BROADCASTING.equals(messageModel);
+    }
+
+    public boolean removeUnnecessaryPopMessageQueue(final MessageQueue mq, final PopProcessQueue pq) {
+        return true;
+    }
+
     private boolean unlockDelay(final MessageQueue mq, final ProcessQueue pq) {
 
         if (pq.hasTempMessage()) {
@@ -176,7 +189,8 @@ public class RebalancePushImpl extends RebalanceImpl {
                         }
                     }
                 } else {
-                    result = -1;
+                    throw new MQClientException(ResponseCode.QUERY_NOT_FOUND, "Failed to query consume offset from " +
+                            "offset store");
                 }
                 break;
             }
@@ -185,9 +199,11 @@ public class RebalancePushImpl extends RebalanceImpl {
                 if (lastOffset >= 0) {
                     result = lastOffset;
                 } else if (-1 == lastOffset) {
+                    //the offset will be fixed by the OFFSET_ILLEGAL process
                     result = 0L;
                 } else {
-                    result = -1;
+                    throw new MQClientException(ResponseCode.QUERY_NOT_FOUND, "Failed to query offset from offset " +
+                            "store");
                 }
                 break;
             }
@@ -214,13 +230,18 @@ public class RebalancePushImpl extends RebalanceImpl {
                         }
                     }
                 } else {
-                    result = -1;
+                    throw new MQClientException(ResponseCode.QUERY_NOT_FOUND, "Failed to query offset from offset " +
+                            "store");
                 }
                 break;
             }
 
             default:
                 break;
+        }
+
+        if (result < 0) {
+            throw new MQClientException(ResponseCode.SYSTEM_ERROR, "Found unexpected result " + result);
         }
 
         return result;
@@ -232,12 +253,50 @@ public class RebalancePushImpl extends RebalanceImpl {
      * @param pullRequestList
      */
     @Override
-    public void dispatchPullRequest(List<PullRequest> pullRequestList) {
+    public int getConsumeInitMode() {
+        final ConsumeFromWhere consumeFromWhere = this.defaultMQPushConsumerImpl.getDefaultMQPushConsumer().getConsumeFromWhere();
+        if (ConsumeFromWhere.CONSUME_FROM_FIRST_OFFSET == consumeFromWhere) {
+            return ConsumeInitMode.MIN;
+        } else {
+            return ConsumeInitMode.MAX;
+        }
+    }
 
+    @Override
+    public void dispatchPullRequest(final List<PullRequest> pullRequestList, final long delay) {
         for (PullRequest pullRequest : pullRequestList) {
             // 把PullRequest 放入 pullRequestQueue 队列中，此时方法take()的阻塞，会唤醒
-            this.defaultMQPushConsumerImpl.executePullRequestImmediately(pullRequest);
-            log.info("doRebalance, {}, add a new pull request {}", consumerGroup, pullRequest);
+            if (delay <= 0) {
+                this.defaultMQPushConsumerImpl.executePullRequestImmediately(pullRequest);
+            } else {
+                this.defaultMQPushConsumerImpl.executePullRequestLater(pullRequest, delay);
+            }
         }
+    }
+
+    @Override
+    public void dispatchPopPullRequest(final List<PopRequest> pullRequestList, final long delay) {
+        for (PopRequest pullRequest : pullRequestList) {
+            if (delay <= 0) {
+                this.defaultMQPushConsumerImpl.executePopPullRequestImmediately(pullRequest);
+            } else {
+                this.defaultMQPushConsumerImpl.executePopPullRequestLater(pullRequest, delay);
+            }
+        }
+    }
+
+    @Override
+    public ProcessQueue createProcessQueue() {
+        return new ProcessQueue();
+    }
+
+    @Override
+    public ProcessQueue createProcessQueue(String topicName) {
+        return createProcessQueue();
+    }
+
+    @Override
+    public PopProcessQueue createPopProcessQueue() {
+        return new PopProcessQueue();
     }
 }

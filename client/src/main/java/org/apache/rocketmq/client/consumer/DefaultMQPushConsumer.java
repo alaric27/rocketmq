@@ -30,7 +30,6 @@ import org.apache.rocketmq.client.consumer.store.OffsetStore;
 import org.apache.rocketmq.client.exception.MQBrokerException;
 import org.apache.rocketmq.client.exception.MQClientException;
 import org.apache.rocketmq.client.impl.consumer.DefaultMQPushConsumerImpl;
-import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.client.trace.AsyncTraceDispatcher;
 import org.apache.rocketmq.client.trace.TraceDispatcher;
 import org.apache.rocketmq.client.trace.hook.ConsumeMessageTraceHookImpl;
@@ -40,11 +39,12 @@ import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
 import org.apache.rocketmq.common.message.MessageDecoder;
 import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.NamespaceUtil;
-import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
-import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.remoting.exception.RemotingException;
+import org.apache.rocketmq.remoting.protocol.NamespaceUtil;
+import org.apache.rocketmq.remoting.protocol.heartbeat.MessageModel;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 
 /**
  * In most scenarios, this is the mostly recommended class to consume messages.
@@ -63,7 +63,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
  */
 public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsumer {
 
-    private final InternalLogger log = ClientLogger.getLog();
+    private final Logger log = LoggerFactory.getLogger(DefaultMQPushConsumer.class);
 
     /**
      * Internal implementation. Most of the functions herein are delegated to it.
@@ -75,7 +75,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * Consumers of the same role is required to have exactly same subscriptions and consumerGroup to correctly achieve
      * load balance. It's required and needs to be globally unique.
      * </p> *
-     * See <a href="http://rocketmq.apache.org/docs/core-concept/">here</a> for further discussion.
+     * See <a href="https://rocketmq.apache.org/docs/introduction/02concepts">here</a> for further discussion.
      */
     private String consumerGroup;
 
@@ -146,7 +146,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * 订阅信息
      * Subscription relationship
      */
-    private Map<String /* topic */, String /* sub expression */> subscription = new HashMap<String, String>();
+    private Map<String /* topic */, String /* sub expression */> subscription = new HashMap<>();
 
     /**
      * 消息业务监听器
@@ -189,11 +189,17 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private int pullThresholdForQueue = 1000;
 
     /**
+     * Flow control threshold on queue level, means max num of messages waiting to ack.
+     * in contrast with pull threshold, once a message is popped, it's considered the beginning of consumption.
+     */
+    private int popThresholdForQueue = 96;
+
+    /**
      * Limit the cached message size on queue level, each message queue will cache at most 100 MiB messages by default,
      * Consider the {@code pullBatchSize}, the instantaneous value may exceed the limit
      *
      * <p>
-     * The size of a message only measured by message body, so it's not accurate
+     * The size(MB) of a message only measured by message body, so it's not accurate
      */
     private int pullThresholdSizeForQueue = 100;
 
@@ -234,6 +240,9 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     private int pullBatchSize = 32;
 
+
+    private int pullBatchSizeInBytes = 256 * 1024;
+
     /**
      * Whether update subscription relationship when every pull
      */
@@ -264,6 +273,16 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     private long consumeTimeout = 15;
 
     /**
+     * Maximum amount of invisible time in millisecond of a message, rang is [5000, 300000]
+     */
+    private long popInvisibleTime = 60000;
+
+    /**
+     * Batch pop size. range is [1, 32]
+     */
+    private int popBatchNums = 32;
+
+    /**
      * Maximum time to await message consuming when shutdown consumer, 0 indicates no await.
      */
     private long awaitTerminationMillisWhenShutdown = 0;
@@ -272,6 +291,9 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      * Interface of asynchronous transfer data
      */
     private TraceDispatcher traceDispatcher = null;
+
+    // force to use client rebalance
+    private boolean clientRebalance = true;
 
     /**
      * Default constructor.
@@ -419,14 +441,14 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Deprecated
     @Override
-    public void createTopic(String key, String newTopic, int queueNum) throws MQClientException {
-        createTopic(key, withNamespace(newTopic), queueNum, 0);
+    public void createTopic(String key, String newTopic, int queueNum, Map<String, String> attributes) throws MQClientException {
+        createTopic(key, withNamespace(newTopic), queueNum, 0, null);
     }
 
     @Override
     public void setUseTLS(boolean useTLS) {
         super.setUseTLS(useTLS);
-        if (traceDispatcher != null && traceDispatcher instanceof AsyncTraceDispatcher) {
+        if (traceDispatcher instanceof AsyncTraceDispatcher) {
             ((AsyncTraceDispatcher) traceDispatcher).getTraceProducer().setUseTLS(useTLS);
         }
     }
@@ -436,7 +458,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Deprecated
     @Override
-    public void createTopic(String key, String newTopic, int queueNum, int topicSysFlag) throws MQClientException {
+    public void createTopic(String key, String newTopic, int queueNum, int topicSysFlag, Map<String, String> attributes) throws MQClientException {
         this.defaultMQPushConsumerImpl.createTopic(key, withNamespace(newTopic), queueNum, topicSysFlag);
     }
 
@@ -616,6 +638,14 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.pullThresholdForQueue = pullThresholdForQueue;
     }
 
+    public int getPopThresholdForQueue() {
+        return popThresholdForQueue;
+    }
+
+    public void setPopThresholdForQueue(int popThresholdForQueue) {
+        this.popThresholdForQueue = popThresholdForQueue;
+    }
+
     public int getPullThresholdForTopic() {
         return pullThresholdForTopic;
     }
@@ -649,7 +679,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
      */
     @Deprecated
     public void setSubscription(Map<String, String> subscription) {
-        Map<String, String> subscriptionWithNamespace = new HashMap<String, String>();
+        Map<String, String> subscriptionWithNamespace = new HashMap<>(subscription.size(), 1);
         for (Entry<String, String> topicEntry : subscription.entrySet()) {
             subscriptionWithNamespace.put(withNamespace(topicEntry.getKey()), topicEntry.getValue());
         }
@@ -674,7 +704,7 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
     public void sendMessageBack(MessageExt msg, int delayLevel)
         throws RemotingException, MQBrokerException, InterruptedException, MQClientException {
         msg.setTopic(withNamespace(msg.getTopic()));
-        this.defaultMQPushConsumerImpl.sendMessageBack(msg, delayLevel, null);
+        this.defaultMQPushConsumerImpl.sendMessageBack(msg, delayLevel, (String) null);
     }
 
     /**
@@ -870,10 +900,12 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.postSubscriptionWhenPull = postSubscriptionWhenPull;
     }
 
+    @Override
     public boolean isUnitMode() {
         return unitMode;
     }
 
+    @Override
     public void setUnitMode(boolean isUnitMode) {
         this.unitMode = isUnitMode;
     }
@@ -910,6 +942,14 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.consumeTimeout = consumeTimeout;
     }
 
+    public long getPopInvisibleTime() {
+        return popInvisibleTime;
+    }
+
+    public void setPopInvisibleTime(long popInvisibleTime) {
+        this.popInvisibleTime = popInvisibleTime;
+    }
+
     public long getAwaitTerminationMillisWhenShutdown() {
         return awaitTerminationMillisWhenShutdown;
     }
@@ -918,7 +958,31 @@ public class DefaultMQPushConsumer extends ClientConfig implements MQPushConsume
         this.awaitTerminationMillisWhenShutdown = awaitTerminationMillisWhenShutdown;
     }
 
+    public int getPullBatchSizeInBytes() {
+        return pullBatchSizeInBytes;
+    }
+
+    public void setPullBatchSizeInBytes(int pullBatchSizeInBytes) {
+        this.pullBatchSizeInBytes = pullBatchSizeInBytes;
+    }
+
     public TraceDispatcher getTraceDispatcher() {
         return traceDispatcher;
+    }
+
+    public int getPopBatchNums() {
+        return popBatchNums;
+    }
+
+    public void setPopBatchNums(int popBatchNums) {
+        this.popBatchNums = popBatchNums;
+    }
+
+    public boolean isClientRebalance() {
+        return clientRebalance;
+    }
+
+    public void setClientRebalance(boolean clientRebalance) {
+        this.clientRebalance = clientRebalance;
     }
 }

@@ -22,9 +22,8 @@ import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
-import org.apache.rocketmq.store.config.MessageStoreConfig;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
 import org.apache.rocketmq.store.util.LibC;
 import sun.nio.ch.DirectBuffer;
 
@@ -34,17 +33,18 @@ import sun.nio.ch.DirectBuffer;
  * 主要是为了将当前堆外内存一直锁定在内存中，避免被进程将内存交换到磁盘
  */
 public class TransientStorePool {
-    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
     private final int poolSize;
     private final int fileSize;
     private final Deque<ByteBuffer> availableBuffers;
-    private final MessageStoreConfig storeConfig;
+    private final DefaultMessageStore messageStore;
+    private volatile boolean isRealCommit;
 
-    public TransientStorePool(final MessageStoreConfig storeConfig) {
-        this.storeConfig = storeConfig;
-        this.poolSize = storeConfig.getTransientStorePoolSize();
-        this.fileSize = storeConfig.getMappedFileSizeCommitLog();
+    public TransientStorePool(final DefaultMessageStore messageStore) {
+        this.messageStore = messageStore;
+        this.poolSize = messageStore.getMessageStoreConfig().getTransientStorePoolSize();
+        this.fileSize = messageStore.getMessageStoreConfig().getMappedFileSizeCommitLog();
         this.availableBuffers = new ConcurrentLinkedDeque<>();
     }
 
@@ -86,9 +86,17 @@ public class TransientStorePool {
     }
 
     public int availableBufferNums() {
-        if (storeConfig.isTransientStorePoolEnable()) {
+        if (messageStore.isTransientStorePoolEnable()) {
             return availableBuffers.size();
         }
         return Integer.MAX_VALUE;
+    }
+
+    public boolean isRealCommit() {
+        return isRealCommit;
+    }
+
+    public void setRealCommit(boolean realCommit) {
+        isRealCommit = realCommit;
     }
 }

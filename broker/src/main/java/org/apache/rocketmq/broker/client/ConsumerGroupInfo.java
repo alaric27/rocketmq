@@ -26,26 +26,26 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.common.consumer.ConsumeFromWhere;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
-import org.apache.rocketmq.common.protocol.heartbeat.ConsumeType;
-import org.apache.rocketmq.common.protocol.heartbeat.MessageModel;
-import org.apache.rocketmq.common.protocol.heartbeat.SubscriptionData;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
+import org.apache.rocketmq.remoting.protocol.heartbeat.ConsumeType;
+import org.apache.rocketmq.remoting.protocol.heartbeat.MessageModel;
+import org.apache.rocketmq.remoting.protocol.heartbeat.SubscriptionData;
 
 /**
  * 消费组信息
  */
 public class ConsumerGroupInfo {
-    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.BROKER_LOGGER_NAME);
 
     /**
      * 消费组名称
      */
     private final String groupName;
     private final ConcurrentMap<String/* Topic */, SubscriptionData> subscriptionTable =
-        new ConcurrentHashMap<String, SubscriptionData>();
+        new ConcurrentHashMap<>();
     private final ConcurrentMap<Channel, ClientChannelInfo> channelInfoTable =
-        new ConcurrentHashMap<Channel, ClientChannelInfo>(16);
+        new ConcurrentHashMap<>(16);
     private volatile ConsumeType consumeType;
     private volatile MessageModel messageModel;
     private volatile ConsumeFromWhere consumeFromWhere;
@@ -57,6 +57,10 @@ public class ConsumerGroupInfo {
         this.consumeType = consumeType;
         this.messageModel = messageModel;
         this.consumeFromWhere = consumeFromWhere;
+    }
+
+    public ConsumerGroupInfo(String groupName) {
+        this.groupName = groupName;
     }
 
     public ClientChannelInfo findChannel(final String clientId) {
@@ -73,6 +77,10 @@ public class ConsumerGroupInfo {
 
     public ConcurrentMap<String, SubscriptionData> getSubscriptionTable() {
         return subscriptionTable;
+    }
+
+    public ClientChannelInfo findChannel(final Channel channel) {
+        return this.channelInfoTable.get(channel);
     }
 
     public ConcurrentMap<Channel, ClientChannelInfo> getChannelInfoTable() {
@@ -101,25 +109,35 @@ public class ConsumerGroupInfo {
         return result;
     }
 
-    public void unregisterChannel(final ClientChannelInfo clientChannelInfo) {
+    public boolean unregisterChannel(final ClientChannelInfo clientChannelInfo) {
         ClientChannelInfo old = this.channelInfoTable.remove(clientChannelInfo.getChannel());
         if (old != null) {
             log.info("unregister a consumer[{}] from consumerGroupInfo {}", this.groupName, old.toString());
+            return true;
         }
+        return false;
     }
 
-    public boolean doChannelCloseEvent(final String remoteAddr, final Channel channel) {
+    public ClientChannelInfo doChannelCloseEvent(final String remoteAddr, final Channel channel) {
         final ClientChannelInfo info = this.channelInfoTable.remove(channel);
         if (info != null) {
             log.warn(
                 "NETTY EVENT: remove not active channel[{}] from ConsumerGroupInfo groupChannelTable, consumer group: {}",
                 info.toString(), groupName);
-            return true;
         }
 
-        return false;
+        return info;
     }
 
+    /**
+     * Update {@link #channelInfoTable} in {@link ConsumerGroupInfo}
+     *
+     * @param infoNew Channel info of new client.
+     * @param consumeType consume type of new client.
+     * @param messageModel message consuming model (CLUSTERING/BROADCASTING) of new client.
+     * @param consumeFromWhere indicate the position when the client consume message firstly.
+     * @return the result that if new connector is connected or not.
+     */
     public boolean updateChannel(final ClientChannelInfo infoNew, ConsumeType consumeType,
         MessageModel messageModel, ConsumeFromWhere consumeFromWhere) {
         boolean updated = false;
@@ -139,9 +157,9 @@ public class ConsumerGroupInfo {
             infoOld = infoNew;
         } else {
             if (!infoOld.getClientId().equals(infoNew.getClientId())) {
-                log.error("[BUG] consumer channel exist in broker, but clientId not equal. GROUP: {} OLD: {} NEW: {} ",
-                    this.groupName,
-                    infoOld.toString(),
+                log.error(
+                    "ConsumerGroupInfo: consumer channel exists in broker, but clientId is not the same one, "
+                        + "group={}, old clientChannelInfo={}, new clientChannelInfo={}", groupName, infoOld.toString(),
                     infoNew.toString());
                 this.channelInfoTable.put(infoNew.getChannel(), infoNew);
             }
@@ -153,6 +171,12 @@ public class ConsumerGroupInfo {
         return updated;
     }
 
+    /**
+     * Update subscription.
+     *
+     * @param subList set of {@link SubscriptionData}
+     * @return the boolean indicates the subscription has changed or not.
+     */
     public boolean updateSubscription(final Set<SubscriptionData> subList) {
         boolean updated = false;
 

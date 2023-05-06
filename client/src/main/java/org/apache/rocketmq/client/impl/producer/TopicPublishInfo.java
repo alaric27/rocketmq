@@ -20,8 +20,8 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.rocketmq.client.common.ThreadLocalIndex;
 import org.apache.rocketmq.common.message.MessageQueue;
-import org.apache.rocketmq.common.protocol.route.QueueData;
-import org.apache.rocketmq.common.protocol.route.TopicRouteData;
+import org.apache.rocketmq.remoting.protocol.route.QueueData;
+import org.apache.rocketmq.remoting.protocol.route.TopicRouteData;
 
 public class TopicPublishInfo {
 
@@ -32,7 +32,7 @@ public class TopicPublishInfo {
     /**
      * 该主题的消息队列
      */
-    private List<MessageQueue> messageQueueList = new ArrayList<MessageQueue>();
+    private List<MessageQueue> messageQueueList = new ArrayList<>();
     /**
      * 每选择一次消息队列，会自增1，超过Integer最大值则重置为0
       */
@@ -86,9 +86,7 @@ public class TopicPublishInfo {
         } else {
             for (int i = 0; i < this.messageQueueList.size(); i++) {
                 int index = this.sendWhichQueue.incrementAndGet();
-                int pos = Math.abs(index) % this.messageQueueList.size();
-                if (pos < 0)
-                    pos = 0;
+                int pos = index % this.messageQueueList.size();
                 MessageQueue mq = this.messageQueueList.get(pos);
                 if (!mq.getBrokerName().equals(lastBrokerName)) {
                     return mq;
@@ -104,9 +102,8 @@ public class TopicPublishInfo {
      */
     public MessageQueue selectOneMessageQueue() {
         int index = this.sendWhichQueue.incrementAndGet();
-        int pos = Math.abs(index) % this.messageQueueList.size();
-        if (pos < 0)
-            pos = 0;
+        int pos = index % this.messageQueueList.size();
+
         return this.messageQueueList.get(pos);
     }
 

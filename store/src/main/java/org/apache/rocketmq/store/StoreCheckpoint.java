@@ -24,8 +24,9 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.FileChannel.MapMode;
 import org.apache.rocketmq.common.UtilAll;
 import org.apache.rocketmq.common.constant.LoggerName;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
+import org.apache.rocketmq.logging.org.slf4j.Logger;
+import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
+import org.apache.rocketmq.store.logfile.DefaultMappedFile;
 
 /**
  * checkpoint 文件对应的存储类
@@ -35,28 +36,30 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
  * indexMsgTimestamp: 索引文件刷盘时间
  */
 public class StoreCheckpoint {
-    private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
+    private static final Logger log = LoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
     private final RandomAccessFile randomAccessFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
     private volatile long physicMsgTimestamp = 0;
     private volatile long logicsMsgTimestamp = 0;
     private volatile long indexMsgTimestamp = 0;
+    private volatile long masterFlushedOffset = 0;
 
     public StoreCheckpoint(final String scpPath) throws IOException {
         File file = new File(scpPath);
-        MappedFile.ensureDirOK(file.getParent());
+        UtilAll.ensureDirOK(file.getParent());
         boolean fileExists = file.exists();
 
         this.randomAccessFile = new RandomAccessFile(file, "rw");
         this.fileChannel = this.randomAccessFile.getChannel();
-        this.mappedByteBuffer = fileChannel.map(MapMode.READ_WRITE, 0, MappedFile.OS_PAGE_SIZE);
+        this.mappedByteBuffer = fileChannel.map(MapMode.READ_WRITE, 0, DefaultMappedFile.OS_PAGE_SIZE);
 
         if (fileExists) {
             log.info("store checkpoint file exists, " + scpPath);
             this.physicMsgTimestamp = this.mappedByteBuffer.getLong(0);
             this.logicsMsgTimestamp = this.mappedByteBuffer.getLong(8);
             this.indexMsgTimestamp = this.mappedByteBuffer.getLong(16);
+            this.masterFlushedOffset = this.mappedByteBuffer.getLong(24);
 
             log.info("store checkpoint file physicMsgTimestamp " + this.physicMsgTimestamp + ", "
                 + UtilAll.timeMillisToHumanString(this.physicMsgTimestamp));
@@ -64,6 +67,7 @@ public class StoreCheckpoint {
                 + UtilAll.timeMillisToHumanString(this.logicsMsgTimestamp));
             log.info("store checkpoint file indexMsgTimestamp " + this.indexMsgTimestamp + ", "
                 + UtilAll.timeMillisToHumanString(this.indexMsgTimestamp));
+            log.info("store checkpoint file masterFlushedOffset " + this.masterFlushedOffset);
         } else {
             log.info("store checkpoint file not exists, " + scpPath);
         }
@@ -73,7 +77,7 @@ public class StoreCheckpoint {
         this.flush();
 
         // unmap mappedByteBuffer
-        MappedFile.clean(this.mappedByteBuffer);
+        UtilAll.cleanBuffer(this.mappedByteBuffer);
 
         try {
             this.fileChannel.close();
@@ -86,6 +90,7 @@ public class StoreCheckpoint {
         this.mappedByteBuffer.putLong(0, this.physicMsgTimestamp);
         this.mappedByteBuffer.putLong(8, this.logicsMsgTimestamp);
         this.mappedByteBuffer.putLong(16, this.indexMsgTimestamp);
+        this.mappedByteBuffer.putLong(24, this.masterFlushedOffset);
         this.mappedByteBuffer.force();
     }
 
@@ -113,8 +118,9 @@ public class StoreCheckpoint {
         long min = Math.min(this.physicMsgTimestamp, this.logicsMsgTimestamp);
 
         min -= 1000 * 3;
-        if (min < 0)
+        if (min < 0) {
             min = 0;
+        }
 
         return min;
     }
@@ -127,4 +133,11 @@ public class StoreCheckpoint {
         this.indexMsgTimestamp = indexMsgTimestamp;
     }
 
+    public long getMasterFlushedOffset() {
+        return masterFlushedOffset;
+    }
+
+    public void setMasterFlushedOffset(long masterFlushedOffset) {
+        this.masterFlushedOffset = masterFlushedOffset;
+    }
 }

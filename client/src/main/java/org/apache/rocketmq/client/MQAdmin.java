@@ -22,27 +22,30 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
+import java.util.Map;
+
 /**
  * Base interface for MQ management
  */
 public interface MQAdmin {
     /**
-     * 创建主题
-     * @param key accesskey
+     * Creates an topic
+     *  @param key accesskey
      * @param newTopic topic name
      * @param queueNum topic's queue number
+     * @param attributes
      */
-    void createTopic(final String key, final String newTopic, final int queueNum) throws MQClientException;
+    void createTopic(final String key, final String newTopic, final int queueNum, Map<String, String> attributes) throws MQClientException;
 
     /**
      * 创建主题
-     *
-     * @param key accesskey
+     *  @param key accesskey
      * @param newTopic topic name
      * @param queueNum topic's queue number
      * @param topicSysFlag topic system flag
+     * @param attributes
      */
-    void createTopic(String key, String newTopic, int queueNum, int topicSysFlag)
+    void createTopic(String key, String newTopic, int queueNum, int topicSysFlag, Map<String, String> attributes)
         throws MQClientException;
 
     /**
