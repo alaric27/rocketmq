@@ -17,15 +17,15 @@
 
 package org.apache.rocketmq.remoting.protocol.header;
 
-import org.apache.rocketmq.remoting.CommandCustomHeader;
 import org.apache.rocketmq.remoting.annotation.CFNotNull;
 import org.apache.rocketmq.remoting.annotation.CFNullable;
 import org.apache.rocketmq.remoting.exception.RemotingCommandException;
+import org.apache.rocketmq.remoting.rpc.TopicQueueRequestHeader;
 
 /**
  * 发送消息请求头
  */
-public class ReplyMessageRequestHeader implements CommandCustomHeader {
+public class ReplyMessageRequestHeader extends TopicQueueRequestHeader {
 
     /**
      * 生产者组

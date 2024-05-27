@@ -265,7 +265,7 @@ public class PullAPIWrapper {
             requestHeader.setSubVersion(subVersion);
             requestHeader.setMaxMsgBytes(maxSizeInBytes);
             requestHeader.setExpressionType(expressionType);
-            requestHeader.setBname(mq.getBrokerName());
+            requestHeader.setBrokerName(mq.getBrokerName());
 
             String brokerAddr = findBrokerResult.getBrokerAddr();
             // 如果消息过滤模式为类过滤，则需要根据主题、Broker地址获取注册在Broker上的FilterServer地址，从FilterServer上拉取消息
@@ -418,7 +418,7 @@ public class PullAPIWrapper {
             requestHeader.setExpType(expressionType);
             requestHeader.setExp(expression);
             requestHeader.setOrder(order);
-            requestHeader.setBname(mq.getBrokerName());
+            requestHeader.setBrokerName(mq.getBrokerName());
             //give 1000 ms for server response
             if (poll) {
                 requestHeader.setPollTime(timeout);

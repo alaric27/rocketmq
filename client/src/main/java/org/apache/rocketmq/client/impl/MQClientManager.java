@@ -21,6 +21,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.rocketmq.client.ClientConfig;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
+import org.apache.rocketmq.client.producer.ProduceAccumulator;
 import org.apache.rocketmq.remoting.RPCHook;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
@@ -34,6 +35,9 @@ public class MQClientManager {
      */
     private ConcurrentMap<String/* clientId */, MQClientInstance> factoryTable =
         new ConcurrentHashMap<>();
+    private ConcurrentMap<String/* clientId */, ProduceAccumulator> accumulatorTable =
+        new ConcurrentHashMap<String, ProduceAccumulator>();
+
 
     private MQClientManager() {
 
@@ -46,13 +50,6 @@ public class MQClientManager {
     public MQClientInstance getOrCreateMQClientInstance(final ClientConfig clientConfig) {
         return getOrCreateMQClientInstance(clientConfig, null);
     }
-
-    /**
-     * 获取或者创建MQClientInstance 对象
-     * @param clientConfig
-     * @param rpcHook
-     * @return
-     */
     public MQClientInstance getOrCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);
@@ -70,6 +67,22 @@ public class MQClientManager {
         }
 
         return instance;
+    }
+    public ProduceAccumulator getOrCreateProduceAccumulator(final ClientConfig clientConfig) {
+        String clientId = clientConfig.buildMQClientId();
+        ProduceAccumulator accumulator = this.accumulatorTable.get(clientId);
+        if (null == accumulator) {
+            accumulator = new ProduceAccumulator(clientId);
+            ProduceAccumulator prev = this.accumulatorTable.putIfAbsent(clientId, accumulator);
+            if (prev != null) {
+                accumulator = prev;
+                log.warn("Returned Previous ProduceAccumulator for clientId:[{}]", clientId);
+            } else {
+                log.info("Created new ProduceAccumulator for clientId:[{}]", clientId);
+            }
+        }
+
+        return accumulator;
     }
 
     public void removeClientFactory(final String clientId) {

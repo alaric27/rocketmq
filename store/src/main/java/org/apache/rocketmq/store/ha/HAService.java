@@ -25,6 +25,7 @@ import org.apache.rocketmq.remoting.protocol.body.HARuntimeInfo;
 import org.apache.rocketmq.store.CommitLog;
 import org.apache.rocketmq.store.DefaultMessageStore;
 import org.apache.rocketmq.store.config.MessageStoreConfig;
+import org.rocksdb.RocksDBException;
 
 /**
  * RocketMQ HA 的实现原理如下：
@@ -60,7 +61,16 @@ public interface HAService {
      *
      * @param masterEpoch the new masterEpoch
      */
-    default boolean changeToMaster(int masterEpoch) {
+    default boolean changeToMaster(int masterEpoch) throws RocksDBException {
+        return false;
+    }
+
+    /**
+     * Change to master state
+     *
+     * @param masterEpoch the new masterEpoch
+     */
+    default boolean changeToMasterWhenLastRoleIsMaster(int masterEpoch) {
         return false;
     }
 
@@ -71,6 +81,16 @@ public interface HAService {
      * @param newMasterEpoch new masterEpoch
      */
     default boolean changeToSlave(String newMasterAddr, int newMasterEpoch, Long slaveId) {
+        return false;
+    }
+
+    /**
+     * Change to slave state
+     *
+     * @param newMasterAddr new master addr
+     * @param newMasterEpoch new masterEpoch
+     */
+    default boolean changeToSlaveWhenMasterNotChange(String newMasterAddr, int newMasterEpoch) {
         return false;
     }
 

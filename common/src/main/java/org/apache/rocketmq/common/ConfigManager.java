@@ -16,26 +16,20 @@
  */
 package org.apache.rocketmq.common;
 
-import java.io.IOException;
-import java.util.Map;
+import org.apache.rocketmq.common.config.RocksDBConfigManager;
 import org.apache.rocketmq.common.constant.LoggerName;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
 import org.apache.rocketmq.logging.org.slf4j.LoggerFactory;
+import org.rocksdb.Statistics;
 
-/**
- * 该类是配置管理器的父类
- * 提供配置文件，加载配置，持久化配置
- * 提供编码，解码方法
- */
+import java.io.IOException;
+import java.util.Map;
+
 public abstract class ConfigManager {
     private static final Logger log = LoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
-    public abstract String encode();
+    protected RocksDBConfigManager rocksDBConfigManager;
 
-    /**
-     * 加载配置文件
-     * @return
-     */
     public boolean load() {
         String fileName = null;
         try {
@@ -55,17 +49,6 @@ public abstract class ConfigManager {
         }
     }
 
-    /**
-     * 返回配置文件路径
-     * @return
-     */
-    public abstract String configFilePath();
-
-
-    /**
-     * 用于在配置文件加载失败时，加载${configFile}.bak文件
-     * @return
-     */
     private boolean loadBak() {
         String fileName = null;
         try {
@@ -84,12 +67,6 @@ public abstract class ConfigManager {
         return true;
     }
 
-    /**
-     * 解码，这里返回的为空，具体由子类实现，
-     * @param jsonString
-     */
-    public abstract void decode(final String jsonString);
-
     public synchronized <T> void persist(String topicName, T t) {
         // stub for future
         this.persist();
@@ -100,9 +77,6 @@ public abstract class ConfigManager {
         this.persist();
     }
 
-    /**
-     * 将编码的内容写入配置文件，用于持久化
-     */
     public synchronized void persist() {
         String jsonString = this.encode(true);
         if (jsonString != null) {
@@ -115,10 +89,23 @@ public abstract class ConfigManager {
         }
     }
 
-    /**
-     * 编码
-     * @param prettyFormat
-     * @return
-     */
+    protected void decode0(final byte[] key, final byte[] body) {
+
+    }
+
+    public boolean stop() {
+        return true;
+    }
+
+    public abstract String configFilePath();
+
+    public abstract String encode();
+
     public abstract String encode(final boolean prettyFormat);
+
+    public abstract void decode(final String jsonString);
+
+    public Statistics getStatistics() {
+        return rocksDBConfigManager == null ? null : rocksDBConfigManager.getStatistics();
+    }
 }

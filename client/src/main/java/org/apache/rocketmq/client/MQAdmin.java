@@ -29,8 +29,8 @@ import java.util.Map;
  */
 public interface MQAdmin {
     /**
-     * Creates an topic
-     *  @param key accesskey
+     * Creates a topic
+     *  @param key accessKey
      * @param newTopic topic name
      * @param queueNum topic's queue number
      * @param attributes
@@ -38,8 +38,8 @@ public interface MQAdmin {
     void createTopic(final String key, final String newTopic, final int queueNum, Map<String, String> attributes) throws MQClientException;
 
     /**
-     * 创建主题
-     *  @param key accesskey
+     * Creates a topic
+     *  @param key accessKey
      * @param newTopic topic name
      * @param queueNum topic's queue number
      * @param topicSysFlag topic system flag

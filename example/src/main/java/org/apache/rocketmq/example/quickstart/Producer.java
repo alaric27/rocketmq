@@ -54,7 +54,7 @@ public class Producer {
          * </pre>
          */
         // Uncomment the following line while debugging, namesrvAddr should be set to your local address
-        producer.setNamesrvAddr(DEFAULT_NAMESRVADDR);
+        // producer.setNamesrvAddr(DEFAULT_NAMESRVADDR);
 
         /*
          * Launch the instance.
@@ -71,7 +71,7 @@ public class Producer {
                     TAG /* Tag */,
                     ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
                 );
-                SendResult sendResult = producer.send(msg);
+                SendResult sendResult = producer.send(msg, 20 * 1000);
                 /*
                  * There are different ways to send message, if you don't care about the send result,you can use this way
                  * {@code

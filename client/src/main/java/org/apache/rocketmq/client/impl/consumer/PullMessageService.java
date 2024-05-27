@@ -19,10 +19,10 @@ package org.apache.rocketmq.client.impl.consumer;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import org.apache.rocketmq.client.impl.factory.MQClientInstance;
 import org.apache.rocketmq.common.ServiceThread;
+import org.apache.rocketmq.common.ThreadFactoryImpl;
 import org.apache.rocketmq.common.message.MessageRequestMode;
 import org.apache.rocketmq.common.utils.ThreadUtils;
 import org.apache.rocketmq.logging.org.slf4j.Logger;
@@ -37,12 +37,7 @@ public class PullMessageService extends ServiceThread {
 
     private final MQClientInstance mQClientFactory;
     private final ScheduledExecutorService scheduledExecutorService = Executors
-        .newSingleThreadScheduledExecutor(new ThreadFactory() {
-            @Override
-            public Thread newThread(Runnable r) {
-                return new Thread(r, "PullMessageServiceScheduledThread");
-            }
-        });
+        .newSingleThreadScheduledExecutor(new ThreadFactoryImpl("PullMessageServiceScheduledThread"));
 
     public PullMessageService(MQClientInstance mQClientFactory) {
         this.mQClientFactory = mQClientFactory;
@@ -110,6 +105,14 @@ public class PullMessageService extends ServiceThread {
         }
     }
 
+    public void executeTask(final Runnable r) {
+        if (!isStopped()) {
+            this.scheduledExecutorService.execute(r);
+        } else {
+            logger.warn("PullMessageServiceScheduledThread has shutdown");
+        }
+    }
+
     public ScheduledExecutorService getScheduledExecutorService() {
         return scheduledExecutorService;
     }
@@ -143,9 +146,9 @@ public class PullMessageService extends ServiceThread {
                 // 如果pullRequestQueue 为空则阻塞，直到有拉取任务被放入
                 MessageRequest messageRequest = this.messageRequestQueue.take();
                 if (messageRequest.getMessageRequestMode() == MessageRequestMode.POP) {
-                    this.popMessage((PopRequest)messageRequest);
+                    this.popMessage((PopRequest) messageRequest);
                 } else {
-                    this.pullMessage((PullRequest)messageRequest);
+                    this.pullMessage((PullRequest) messageRequest);
                 }
             } catch (InterruptedException ignored) {
             } catch (Exception e) {

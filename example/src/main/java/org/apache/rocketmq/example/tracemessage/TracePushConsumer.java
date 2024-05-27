@@ -31,8 +31,7 @@ public class TracePushConsumer {
 
     public static void main(String[] args) throws InterruptedException, MQClientException {
         // Here,we use the default message track trace topic name
-        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(CONSUMER_GROUP, true,"mytrace");
-        consumer.setNamesrvAddr("172.31.85.205:9876");
+        DefaultMQPushConsumer consumer = new DefaultMQPushConsumer(CONSUMER_GROUP, true, null);
 
         // Uncomment the following line while debugging, namesrvAddr should be set to your local address
 //        consumer.setNamesrvAddr(DEFAULT_NAMESRVADDR);
