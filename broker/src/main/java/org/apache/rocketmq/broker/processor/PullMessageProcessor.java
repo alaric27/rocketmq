@@ -796,7 +796,8 @@ public class PullMessageProcessor implements NettyRequestProcessor {
     public void executeRequestWhenWakeup(final Channel channel, final RemotingCommand request) {
         Runnable run = () -> {
             try {
-                final RemotingCommand response = PullMessageProcessor.this.processRequest(channel, request, false);
+                boolean brokerAllowFlowCtrSuspend = !(request.getExtFields() != null && request.getExtFields().containsKey(ColdDataPullRequestHoldService.NO_SUSPEND_KEY));
+                final RemotingCommand response = PullMessageProcessor.this.processRequest(channel, request, false, brokerAllowFlowCtrSuspend);
 
                 if (response != null) {
                     response.setOpaque(request.getOpaque());

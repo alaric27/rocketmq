@@ -35,7 +35,8 @@ public interface MQAdmin {
      * @param queueNum topic's queue number
      * @param attributes
      */
-    void createTopic(final String key, final String newTopic, final int queueNum, Map<String, String> attributes) throws MQClientException;
+    void createTopic(final String key, final String newTopic, final int queueNum, Map<String, String> attributes)
+        throws MQClientException;
 
     /**
      * Creates a topic

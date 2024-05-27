@@ -147,13 +147,11 @@ public class MQFaultStrategy {
             }
 
             mq = tpInfo.selectOneMessageQueue(reachableFilter, brokerFilter);
-            // 验证该消息队列是否可用
-                    if (mq != null) {
+            if (mq != null) {
                 return mq;
             }
 
-
-                return tpInfo.selectOneMessageQueue();
+            return tpInfo.selectOneMessageQueue();
         }
 
         MessageQueue mq = tpInfo.selectOneMessageQueue(brokerFilter);

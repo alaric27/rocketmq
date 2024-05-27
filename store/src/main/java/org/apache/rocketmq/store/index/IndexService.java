@@ -243,7 +243,6 @@ public class IndexService {
             }
 
             if (req.getUniqKey() != null) {
-                //
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
                     LOGGER.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());

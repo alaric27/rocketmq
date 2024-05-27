@@ -376,10 +376,9 @@ public class MappedFileQueue implements Swappable {
 
     protected MappedFile doCreateMappedFile(String nextFilePath, String nextNextFilePath) {
         MappedFile mappedFile = null;
-
         // 创建MappedFile 文件
-            if (this.allocateMappedFileService != null) {
-                mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,
+        if (this.allocateMappedFileService != null) {
+            mappedFile = this.allocateMappedFileService.putRequestAndReturnMappedFile(nextFilePath,
                     nextNextFilePath, this.mappedFileSize);
         } else {
             try {
@@ -390,12 +389,12 @@ public class MappedFileQueue implements Swappable {
         }
 
         // 将MappedFile 添加到mappedFiles中
-            if (mappedFile != null) {
-                if (this.mappedFiles.isEmpty()) {
-                    mappedFile.setFirstCreateInQueue(true);
-                }
-                this.mappedFiles.add(mappedFile);
+        if (mappedFile != null) {
+            if (this.mappedFiles.isEmpty()) {
+                mappedFile.setFirstCreateInQueue(true);
             }
+            this.mappedFiles.add(mappedFile);
+        }
 
         return mappedFile;
     }
