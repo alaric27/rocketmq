@@ -938,6 +938,7 @@ public class CommitLog implements Swappable {
         String topicQueueKey = generateKey(putMessageThreadLocal.getKeyBuilder(), msg);
         long elapsedTimeInLock = 0;
         MappedFile unlockMappedFile = null;
+        // 获取写入文件
         MappedFile mappedFile = this.mappedFileQueue.getLastMappedFile();
 
         long currOffset;
@@ -999,6 +1000,7 @@ public class CommitLog implements Swappable {
                 }
 
                 if (null == mappedFile || mappedFile.isFull()) {
+                    // 当文件不存在或者文件已满，创建新文件
                     mappedFile = this.mappedFileQueue.getLastMappedFile(0); // Mark: NewFile may be cause noise
                     if (isCloseReadAhead()) {
                         setFileReadMode(mappedFile, LibC.MADV_RANDOM);
@@ -1010,6 +1012,7 @@ public class CommitLog implements Swappable {
                     return CompletableFuture.completedFuture(new PutMessageResult(PutMessageStatus.CREATE_MAPPED_FILE_FAILED, null));
                 }
 
+                // 存储消息
                 result = mappedFile.appendMessage(msg, this.appendMessageCallback, putMessageContext);
                 switch (result.getStatus()) {
                     case PUT_OK:

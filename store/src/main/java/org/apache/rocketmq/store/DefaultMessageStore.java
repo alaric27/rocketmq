@@ -940,6 +940,7 @@ public class DefaultMessageStore implements MessageStore {
                     brokerStatsManager.recordDiskFallBehindSize(group, topic, queueId, fallBehind);
                 }
 
+                // 如果主服务器繁忙则设置返回结果下一次从从服务拉取
                 long diff = maxOffsetPy - maxPhyOffsetPulling;
                 long memory = (long) (StoreUtil.TOTAL_PHYSICAL_MEMORY_SIZE
                     * (this.messageStoreConfig.getAccessMessageInMemoryMaxRatio() / 100.0));

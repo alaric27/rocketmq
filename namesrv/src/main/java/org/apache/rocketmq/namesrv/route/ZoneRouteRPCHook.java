@@ -32,6 +32,9 @@ import org.apache.rocketmq.remoting.protocol.route.BrokerData;
 import org.apache.rocketmq.remoting.protocol.route.QueueData;
 import org.apache.rocketmq.remoting.protocol.route.TopicRouteData;
 
+/**
+ * 多区域部署时，获取路由信息时，过滤掉非指定区域的broker
+ */
 public class ZoneRouteRPCHook implements RPCHook {
 
     @Override

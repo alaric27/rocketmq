@@ -128,6 +128,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             return response;
         }
 
+        // 重试主题的名称 %RETRY%+group
         String newTopic = MixAll.getRetryTopic(requestHeader.getGroup());
         int queueIdInt = this.random.nextInt(subscriptionGroupConfig.getRetryQueueNums());
 
@@ -137,6 +138,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         }
 
         // Create retry topic to master broker
+        // 创建重试topic
         TopicConfig topicConfig = masterBroker.getTopicConfigManager().createTopicInSendMessageBackMethod(
             newTopic,
             subscriptionGroupConfig.getRetryQueueNums(),
@@ -189,6 +191,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
             BrokerMetricsManager.sendToDlqMessages.add(1, attributes);
 
             isDLQ = true;
+            // 如果大于最大重试次数，则发送到死信队列, 队列topic %DLQ%+group
             newTopic = MixAll.getDLQTopic(requestHeader.getGroup());
             queueIdInt = randomQueueId(DLQ_NUMS_PER_GROUP);
 
@@ -233,6 +236,7 @@ public abstract class AbstractSendMessageProcessor implements NettyRequestProces
         boolean succeeded = false;
 
         // Put retry topic to master message store
+        // 写入commitLog文件
         PutMessageResult putMessageResult = masterBroker.getMessageStore().putMessage(msgInner);
         if (putMessageResult != null) {
             String commercialOwner = request.getExtFields().get(BrokerStatsManager.COMMERCIAL_OWNER);

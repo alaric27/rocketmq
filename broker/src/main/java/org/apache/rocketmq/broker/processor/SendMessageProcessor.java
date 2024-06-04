@@ -217,6 +217,7 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
                 sendRetryMessageToDeadLetterQueueDirectly = true;
             }
 
+            // 大于最大重试次数，进入死信队列
             if (reconsumeTimes > maxReconsumeTimes || sendRetryMessageToDeadLetterQueueDirectly) {
                 Attributes attributes = BrokerMetricsManager.newAttributesBuilder()
                     .put(LABEL_CONSUMER_GROUP, requestHeader.getProducerGroup())

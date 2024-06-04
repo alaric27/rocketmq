@@ -382,8 +382,10 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
         boolean suspend = false;
         if (msgs != null && !msgs.isEmpty()) {
             for (MessageExt msg : msgs) {
+                // 顺序消息重试次数为Integer.MAX_VALUE
                 if (msg.getReconsumeTimes() >= getMaxReconsumeTimes()) {
                     MessageAccessor.setReconsumeTime(msg, String.valueOf(msg.getReconsumeTimes()));
+                    // 如果失败次数过多，向broker发送消息，最终消息进入死信队列
                     if (!sendMessageBack(msg)) {
                         suspend = true;
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);

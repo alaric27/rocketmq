@@ -538,6 +538,7 @@ public abstract class RebalanceImpl {
         List<PullRequest> pullRequestList = new ArrayList<>();
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {
+                // 如果是顺序消息需要在broker锁定该队列
                 if (isOrder && !this.lock(mq)) {
                     log.warn("doRebalance, {}, add a new mq failed, {}, because lock failed", consumerGroup, mq);
                     allMQLocked = false;
